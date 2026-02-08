@@ -1,0 +1,13 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import CoinScout from '../../components/CoinScout.jsx';
+---
+
+<Layout>
+  <div class="mb-4">
+    <a href="/" class="text-amber-400 hover:text-amber-300 transition-colors text-sm">
+      ← Back to Home
+    </a>
+  </div>
+  <CoinScout client:load />
+</Layout>
