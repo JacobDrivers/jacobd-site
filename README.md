@@ -29,18 +29,11 @@ A personal website featuring various tools and information. This site combines u
 └── package.json
 ```
 
-## Commands
+## 🌐 Visit the Live Site
 
-All commands are run from the root of the project, from a terminal:
+Check out the live website: **[jacobd-site.pages.dev](https://jacobd-site.pages.dev)**
 
-| Command       | Action                                    |
-| :------------ | :---------------------------------------- |
-| npm install   | Installs dependencies                     |
-| npm run dev   | Starts local dev server at localhost:4321 |
-| npm run build | Build your production site to ./dist/      |
-| npm run preview | Preview your build locally              |
-
-## Technology Stack
+## 🛠️ Built With
 
 - **Astro** - Static site generator
 - **React** - Interactive components
