@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0" stop-color="#f3f4f6" />
+      <stop offset="1" stop-color="#e5e7eb" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="640" fill="url(#g)" />
+  <rect x="60" y="60" width="1080" height="520" rx="8" fill="#ffffff" stroke="#d1d5db" />
+  <g font-family="Inter, Arial, Helvetica, sans-serif" fill="#9ca3af">
+    <text x="120" y="160" font-size="36" font-weight="600" fill="#374151">Screenshot placeholder</text>
+    <text x="120" y="210" font-size="18">Replace this file with a real PNG or JPG export from your site.</text>
+    <text x="120" y="260" font-size="14">Path: /public/screenshot.svg</text>
+  </g>
+  <g transform="translate(120,320)" fill="#e6e9ef">
+    <rect width="960" height="160" rx="6" />
+    <text x="20" y="60" font-size="20" fill="#9ca3af">Site preview area — replace with a screenshot of the homepage or tool</text>
+  </g>
+</svg>

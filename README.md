@@ -1,41 +1,89 @@
 ﻿# Jacob's Site
 
-A personal website featuring various tools and information. This site combines useful utilities with personal content and projects.
+Personal website and small toolkit collection. Built with Astro and React, the site hosts interactive utilities (notably the CoinScout tool), projects, and a simple profile.
+
+
+[![Site](https://img.shields.io/badge/site-live-brightgreen)](https://jacobd-site.pages.dev) [![Astro](https://img.shields.io/badge/built%20with-Astro-ff5e00)](https://astro.build) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+![screenshot](public/screenshot.svg)
+
+Quick link: Live demo — https://jacobd-site.pages.dev
+
+**Table of contents**
+
+- [About](#about)
+- [Live demo](#live-demo)
+- [Features](#features)
+- [Quick start](#quick-start)
+- [Project structure](#project-structure)
+- [Tech stack](#tech-stack)
+- [Contributing](#contributing)
+- [License & contact](#license--contact)
+
+## About
+
+This repository contains the source for my personal site. It includes small web tools (see `CoinScout`), a projects list, and personal notes. The site is deployed to GitHub Pages and serves static assets from `public/`.
+
+## Live demo
+
+View the live site: https://jacobd-site.pages.dev
+
+Add a screenshot to `public/screenshot.svg` (or `public/screenshot.png`) to show a visual preview on GitHub.
 
 ## Features
 
-- **CoinScout Tool**: Interactive tool for researching and identifying collectible coins with detailed information on coin types, key dates, varieties, and grading guidance
-- **Personal Profile**: Information and projects about me
-- **Multiple Tools**: A growing collection of useful utilities and interactive tools
-- **Clean, Modern Design**: Built with Astro and React for fast, responsive performance
+- **CoinScout**: Interactive coin research tool — lookup coin types, key dates, varieties, and grading guidance.
+- **Tools collection**: Tiny utilities and demos under `src/pages/tools/`.
+- **Fast static site**: Built with Astro for performant static builds and partial hydration via React components.
 
-## Project Structure
+Example: open the CoinScout tool at `/tools/coin-scout` to search and explore coin details.
+
+## Quick start
+
+Prerequisites: Node.js (16+ recommended) and npm or pnpm.
+
+Install and run locally:
+
+```bash
+npm install
+npm run dev
+```
+
+Build for production:
+
+```bash
+npm run build
+npm run preview
+```
+
+## Project structure
 
 ```text
 /
-├── public/
-├── src
+├── public/                # static assets (favicons, images, manifest)
+├── src/
 │   ├── assets/
-│   ├── components/
-│   │   └── CoinScout.jsx
-│   ├── layouts/
-│   │   └── Layout.astro
-│   ├── pages/
-│   │   ├── index.astro
-│   │   └── tools/
-│   │       └── coin-scout.astro
-│   └── styles/
-│       └── global.css
+│   ├── components/        # React components (CoinScout.jsx)
+│   ├── layouts/           # Astro layouts
+│   ├── pages/             # Astro pages and API routes
+│   │   └── tools/         # interactive tools (coin-scout)
+│   └── styles/            # global styles
 └── package.json
 ```
 
-## 🌐 Visit the Live Site
+## Tech stack
 
-Check out the live website: **[jacobd-site.pages.dev](https://jacobd-site.pages.dev)**
+- Astro — static site generator
+- React — interactive components
+- Tailwind CSS — utility-first styling
+- Lucide React — icons
 
-## 🛠️ Built With
+## Contributing
 
-- **Astro** - Static site generator
-- **React** - Interactive components
-- **Tailwind CSS** - Styling
-- **Lucide React** - Icons
+Suggestions, fixes, or issues are welcome. Please open an issue or a PR with a short description of the change.
+
+If you'd like to run and test locally, follow the Quick start above and check the `tools/` pages.
+
+## License & contact
+
+This project is available under the MIT License. For questions or collaboration, open an issue or contact the repository owner.
