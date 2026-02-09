@@ -28,8 +28,6 @@ This repository contains the source for my personal site. It includes small web 
 
 View the live site: https://jacobd-site.pages.dev
 
-Add a screenshot to `public/screenshot.svg` (or `public/screenshot.png`) to show a visual preview on GitHub.
-
 ## Features
 
 - **CoinScout**: Interactive coin research tool — lookup coin types, key dates, varieties, and grading guidance.
