@@ -175,12 +175,8 @@ export default function CoinScout() {
       const response = await fetch('/api/metals.json');
       const data = await response.json();
       
-      console.log('API Response:', data);
-      
       const silver = parseFloat(data.silver);
       const gold = parseFloat(data.gold);
-      
-      console.log('Parsed values - Silver:', silver, 'Gold:', gold);
       
       if (!isNaN(silver) && !isNaN(gold) && silver > 0 && gold > 0) {
         const source = data.source ? ` (${data.source})` : '';
@@ -192,10 +188,7 @@ export default function CoinScout() {
           gold,
           updated: new Date().toLocaleTimeString() + source + staleIndicator + errorIndicator
         });
-        console.log('Successfully set prices:', { silver, gold });
       } else {
-        console.warn('Invalid price values:', { silver, gold, data });
-        console.warn('Using fallback values');
         // Use fallback values if parsing fails
         setSpotPrices({
           silver: 31.5,

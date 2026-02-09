@@ -4,8 +4,6 @@ let cacheTime = null;
 const CACHE_DURATION = 3600000; // 1 hour
 
 async function fetchFromMetalsDev(apiKey) {
-  console.log('Fetching from metals.dev with API key present:', !!apiKey);
-  
   const response = await fetch(
     `https://api.metals.dev/v1/latest?api_key=${apiKey}&currency=USD&unit=toz`
   );
@@ -15,13 +13,10 @@ async function fetchFromMetalsDev(apiKey) {
   }
 
   const data = await response.json();
-  console.log('Metals.dev raw response:', JSON.stringify(data, null, 2));
   
   // Check all possible response structures
   let silver = data.metals?.silver || data.silver || null;
   let gold = data.metals?.gold || data.gold || null;
-  
-  console.log('Extracted from metals.dev:', { silver, gold });
   
   if (!silver || !gold) {
     throw new Error(`Metals.dev missing prices - Silver: ${silver}, Gold: ${gold}`);
