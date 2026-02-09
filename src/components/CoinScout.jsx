@@ -175,23 +175,54 @@ export default function CoinScout() {
       const response = await fetch('/api/metals.json');
       const data = await response.json();
       
-      if (data.metals) {
+      console.log('API Response:', data);
+      
+      const silver = parseFloat(data.silver);
+      const gold = parseFloat(data.gold);
+      
+      console.log('Parsed values - Silver:', silver, 'Gold:', gold);
+      
+      if (!isNaN(silver) && !isNaN(gold) && silver > 0 && gold > 0) {
+        const source = data.source ? ` (${data.source})` : '';
+        const staleIndicator = data.stale ? ' [CACHED]' : '';
+        const errorIndicator = data.error ? ` - Warning: ${data.error}` : '';
+        
         setSpotPrices({
-          silver: data.metals.silver || 31.5,
-          gold: data.metals.gold || 2750,
-          updated: new Date().toLocaleTimeString()
+          silver,
+          gold,
+          updated: new Date().toLocaleTimeString() + source + staleIndicator + errorIndicator
+        });
+        console.log('Successfully set prices:', { silver, gold });
+      } else {
+        console.warn('Invalid price values:', { silver, gold, data });
+        console.warn('Using fallback values');
+        // Use fallback values if parsing fails
+        setSpotPrices({
+          silver: 31.5,
+          gold: 2750,
+          updated: 'Error loading prices - using fallback'
         });
       }
     } catch (error) {
       console.error('Failed to fetch prices:', error);
-      setSpotPrices(prev => ({ ...prev, updated: 'Cached' }));
+      setSpotPrices(prev => ({ ...prev, updated: 'Error - see console' }));
     }
     setLoading(false);
   };
 
   // Fetch spot prices on component mount
   useEffect(() => {
-    fetchSpotPrices();
+    let isMounted = true;
+    
+    const loadPrices = async () => {
+      await fetchSpotPrices();
+    };
+    
+    loadPrices();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Calculate melt value
