@@ -39,7 +39,6 @@ async function fetchFromCoinGecko() {
   }
 
   const data = await response.json();
-  console.log('CoinGecko raw response:', data);
   
   return {
     silver: data.silver?.usd,
@@ -64,53 +63,37 @@ export async function GET() {
   let priceData = null;
   let error = null;
 
-  // Debug: Check if API key is available
-  console.log('=== METALS API ENDPOINT ===');
-  console.log('API Key available:', apiKey ? 'YES' : 'NO');
-  if (!apiKey) {
-    console.log('Checked: import.meta.env.METALS_API_KEY =', import.meta.env.METALS_API_KEY);
-  }
+  // Note: API key configuration is optional - uses fallback if unavailable
 
   // Try metals.dev first (premium source, limited calls)
   if (apiKey) {
     try {
-      console.log('Attempting metals.dev fetch...');
       priceData = await fetchFromMetalsDev(apiKey);
       
       if (!priceData.silver || !priceData.gold) {
         throw new Error(`Missing prices from metals.dev: ${JSON.stringify(priceData)}`);
       }
-      
-      console.log('Successfully fetched from metals.dev:', priceData);
     } catch (err) {
       error = err.message;
-      console.error('Metals.dev fetch failed:', error);
       priceData = null;
     }
-  } else {
-    console.warn('No METALS_API_KEY configured');
   }
 
   // Only fallback to CoinGecko if metals.dev completely failed and no cache
-  // Skip CoinGecko on initial failures to avoid rate limiting
-  if (!priceData && !cachedPrices && false) {
+  if (!priceData && !cachedPrices) {
     try {
-      console.log('Attempting CoinGecko fallback...');
       priceData = await fetchFromCoinGecko();
       if (!priceData.silver || !priceData.gold) {
         throw new Error('Missing silver or gold in CoinGecko response');
       }
-      console.log('Successfully fetched from CoinGecko:', priceData);
     } catch (err) {
       error = err.message;
-      console.error('CoinGecko fetch failed:', error);
       priceData = null;
     }
   }
 
   // Return cached prices if available
   if (!priceData && cachedPrices) {
-    console.log('Returning cached prices');
     return new Response(JSON.stringify({ ...cachedPrices, stale: true, source: `${cachedPrices.source} [CACHED]` }), {
       status: 200,
       headers: { 
@@ -122,7 +105,7 @@ export async function GET() {
 
   // Last resort: return hardcoded defaults
   if (!priceData) {
-    console.log('Using fallback prices due to API failure:', error);
+    // Production: suppress verbose logging for fallback
     return new Response(
       JSON.stringify({ 
         silver: 31.5,
@@ -143,7 +126,6 @@ export async function GET() {
   const gold = parseFloat(priceData.gold);
 
   if (isNaN(silver) || isNaN(gold) || silver <= 0 || gold <= 0) {
-    console.error('Invalid price values:', { silver, gold, raw: priceData });
     return new Response(
       JSON.stringify({ 
         silver: 31.5,

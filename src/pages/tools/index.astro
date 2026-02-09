@@ -1,51 +1,110 @@
 ---
+import Layout from '../../layouts/Layout.astro';
+
 const tools = [
   { name: "Coin & Currency Scout", href: "/tools/coin-scout", status: "Live" },
 ];
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Tools | Jacob Drury</title>
-    <meta name="description" content="Tools and small utilities." />
-    <style>
-      body { margin: 0; font-family: ui-sans-serif, system-ui; background: #0b1220; color: rgba(255,255,255,0.92); }
-      .wrap { max-width: 900px; margin: 0 auto; padding: 26px 18px; }
-      a { color: inherit; text-decoration: none; }
-      .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-      .btn { border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.06); padding: 10px 14px; border-radius: 12px; font-weight: 600; }
-      .list { margin-top: 16px; display: grid; gap: 12px; }
-      .item { border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); border-radius: 14px; padding: 14px; }
-      .muted { color: rgba(255,255,255,0.70); }
-      code { color: rgba(255,255,255,0.75); }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <div class="top">
-        <h1 style="margin:0; font-size: 24px;">Tools</h1>
-        <a class="btn" href="/">Home</a>
+<Layout>
+  <div class="tools-page">
+    <div class="tools-header">
+      <div>
+        <h1>Tools</h1>
+        <p>Small utilities that are meant to be shared and used.</p>
       </div>
-
-      <p class="muted" style="margin-top: 8px;">
-        Small utilities that are meant to be shared and used.
-      </p>
-
-      <div class="list">
-        {tools.map((t) => (
-          <a class="item" href={t.href}>
-            <div style="display:flex; justify-content: space-between; align-items:center; gap: 10px;">
-              <div style="font-weight:700;">{t.name}</div>
-              <div class="muted" style="font-size: 13px;">{t.status}</div>
-            </div>
-            <div class="muted" style="margin-top: 6px;">
-              Open: <code>{t.href}</code>
-            </div>
-          </a>
-        ))}
-      </div>
+      <a class="tools-home-btn" href="/">Home</a>
     </div>
-  </body>
-</html>
+
+    <div class="tools-list">
+      {tools.map((t) => (
+        <a class="tools-item" href={t.href}>
+          <div class="tools-item-header">
+            <div class="tools-item-name">{t.name}</div>
+            <div class="tools-item-status">{t.status}</div>
+          </div>
+          <div class="tools-item-path">
+            Open: <code>{t.href}</code>
+          </div>
+        </a>
+      ))}
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .tools-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 26px 18px;
+  }
+
+  .tools-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .tools-header h1 {
+    margin: 0;
+    font-size: 24px;
+  }
+
+  .tools-header p {
+    margin: 8px 0 0 0;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .tools-home-btn {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-weight: 600;
+    display: inline-block;
+  }
+
+  .tools-list {
+    margin-top: 16px;
+    display: grid;
+    gap: 12px;
+  }
+
+  .tools-item {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    padding: 14px;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .tools-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .tools-item-name {
+    font-weight: 700;
+  }
+
+  .tools-item-status {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 13px;
+  }
+
+  .tools-item-path {
+    color: rgba(255, 255, 255, 0.7);
+    margin-top: 6px;
+    font-size: 14px;
+  }
+
+  .tools-item-path code {
+    color: rgba(255, 255, 255, 0.75);
+  }
+</style>
