@@ -80,9 +80,10 @@ const links = [
       header {
         display: flex;
         align-items: flex-start;
-        justify-content: space-between;
+        justify-content: flex-start;
         gap: 18px;
         margin-top: 14px;
+        margin-bottom: 28px;
       }
 
       .brand h1 {
@@ -95,64 +96,28 @@ const links = [
       .brand p {
         margin: 0;
         color: var(--muted);
-        max-width: 60ch;
+        max-width: 70ch;
         line-height: 1.5;
       }
 
-      .pillbar {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: flex-end;
-      }
-
-      .pill {
-        border: 1px solid var(--stroke);
-        background: var(--panel);
-        padding: 8px 12px;
-        border-radius: 999px;
-        color: var(--muted);
-        font-size: 13px;
-        display: inline-flex;
-        gap: 8px;
-        align-items: center;
-      }
-
-      .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 999px;
-        background: var(--good);
-        box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.12);
+      @media (max-width: 860px) {
+        header { flex-direction: column; align-items: flex-start; }
       }
 
       .hero {
-        margin-top: 26px;
+        margin-top: 0;
         border: 1px solid var(--stroke);
         background: linear-gradient(180deg, var(--panel2), rgba(255,255,255,0.03));
         border-radius: var(--radius);
-        padding: 18px;
+        padding: 24px;
         box-shadow: var(--shadow);
-      }
-
-      .heroRow {
-        display: grid;
-        grid-template-columns: 1.25fr 0.75fr;
-        gap: 14px;
-      }
-
-      @media (max-width: 860px) {
-        .heroRow { grid-template-columns: 1fr; }
-        header { flex-direction: column; align-items: flex-start; }
-        .pillbar { justify-content: flex-start; }
       }
 
       .cta {
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
-        margin-top: 14px;
+        margin-top: 12px;
       }
 
       .btn {
@@ -178,17 +143,10 @@ const links = [
       }
 
       .cards {
-        margin-top: 18px;
+        margin-top: 16px;
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: 1fr;
         gap: 12px;
-      }
-
-      @media (max-width: 980px) {
-        .cards { grid-template-columns: repeat(2, 1fr); }
-      }
-      @media (max-width: 620px) {
-        .cards { grid-template-columns: 1fr; }
       }
 
       .card {
@@ -225,18 +183,6 @@ const links = [
 
       .card h3 { margin: 10px 0 6px; font-size: 16px; letter-spacing: -0.01em; }
       .card p { margin: 0; color: var(--muted); line-height: 1.45; font-size: 14px; }
-
-      .footer {
-        margin-top: 18px;
-        color: var(--faint);
-        font-size: 13px;
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-
-      .sep { opacity: 0.35; }
     </style>
   </head>
 
@@ -244,89 +190,67 @@ const links = [
     <div class="wrap">
       <header>
         <div class="brand">
-          <h1>Jacob Drury</h1>
+          <h1>Tools & quick answers</h1>
           <p>
-            A small, practical site for tools and experiments I actually use.
-            If you need a quick answer or calculator, it should be here.
+            No accounts. No tracking. Just fast, shareable calculators and references built for real use.
           </p>
-        </div>
-
-        <div class="pillbar">
-          <span class="pill"><span class="dot"></span> Live deploy via Cloudflare Pages</span>
-          <span class="pill">Astro + TypeScript</span>
-          <span class="pill">Fast + static-first</span>
         </div>
       </header>
 
-      <section class="hero">
-        <div class="heroRow">
-          <div>
-            <div class="pill" style="display:inline-flex; margin-bottom: 10px;">
-              Tools hub
-              <span class="sep">•</span>
-              shareable links
-              <span class="sep">•</span>
-              no noise
-            </div>
-
-            <div style="font-size: 18px; line-height: 1.5; color: var(--muted);">
-              Start with the tools below. More will show up as I build them.
-            </div>
-
-            <div class="cta">
-              <a class="btn btnPrimary" href="/tools/coin-scout">Open Coin & Currency Scout</a>
-              <a class="btn" href="/tools">Browse all tools</a>
-            </div>
+      <main class="hero">
+        <section>
+          <div style="margin-bottom: 18px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <span style="color: var(--good); font-size: 13px; font-weight: 600;">✓ No accounts</span>
+            <span style="color: var(--faint);">•</span>
+            <span style="color: var(--good); font-size: 13px; font-weight: 600;">✓ No tracking</span>
+            <span style="color: var(--faint);">•</span>
+            <span style="color: var(--good); font-size: 13px; font-weight: 600;">✓ Fast & static</span>
           </div>
 
-          <div>
-            <div class="card" style="min-height: auto;">
-              <div class="cardTop">
-                <span class="badge">Now</span>
-                <span class="badge badgeLive">Live</span>
-              </div>
-              <h3 style="margin-top: 12px;">Coin & Currency Scout</h3>
-              <p>
-                Melt math, quick ID notes, and an inventory flow aimed at real use.
-              </p>
-            </div>
+          <h2 style="margin: 0 0 12px; font-size: 20px; letter-spacing: -0.01em;">Available now</h2>
 
-            <div class="footer" style="margin-top: 12px;">
-              {links.map((l) => (
-                <>
-                  <a class="btn" href={l.href} target="_blank" rel="noreferrer">{l.name}</a>
-                </>
-              ))}
-            </div>
+          <div class="cards">
+            {tools.slice(0, 1).map((t) => (
+              <a
+                class={`card ${t.disabled ? "disabled" : ""}`}
+                href={t.disabled ? "#" : t.href}
+                aria-disabled={t.disabled ? "true" : "false"}
+                tabindex={t.disabled ? "-1" : "0"}
+                style="grid-column: 1 / -1;"
+              >
+                <div class="cardTop">
+                  <span class="badge">{t.tag}</span>
+                  <span class={`badge ${t.status === "Live" ? "badgeLive" : "badgeSoon"}`}>
+                    {t.status}
+                  </span>
+                </div>
+                <h3>{t.name}</h3>
+                <p>{t.desc}</p>
+              </a>
+            ))}
           </div>
-        </div>
 
-        <div class="cards">
-          {tools.map((t) => (
-            <a
-              class={`card ${t.disabled ? "disabled" : ""}`}
-              href={t.disabled ? "#" : t.href}
-              aria-disabled={t.disabled ? "true" : "false"}
-              tabindex={t.disabled ? "-1" : "0"}
-            >
-              <div class="cardTop">
-                <span class="badge">{t.tag}</span>
-                <span class={`badge ${t.status === "Live" ? "badgeLive" : "badgeSoon"}`}>
-                  {t.status}
-                </span>
-              </div>
-              <h3>{t.name}</h3>
-              <p>{t.desc}</p>
-            </a>
-          ))}
-        </div>
+          <div class="cta" style="margin-top: 14px;">
+            <a class="btn btnPrimary" href="/tools">See all tools</a>
+          </div>
+        </section>
 
-        <div class="footer">
-          <span>Built for quick sharing and real utility.</span>
-          <span class="sep">•</span>
-          <span>More tools will be added under <code>/tools</code>.</span>
-        </div>
-      </section>
+        <section style="margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--stroke);">
+          <h2 style="margin: 0 0 12px; font-size: 16px; letter-spacing: -0.01em; color: var(--muted);">About this site</h2>
+          <p style="margin: 0; color: var(--muted); max-width: 70ch; line-height: 1.6; font-size: 14px;">
+            I built these tools for myself. They solve real problems I have: quick reference while buying, fast math for spot prices, inventory tracking. If they're useful to you too, great.
+          </p>
+        </section>
+
+        <footer style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--stroke); display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            {links.map((l) => (
+              <a class="btn" href={l.href} target="_blank" rel="noreferrer">{l.name}</a>
+            ))}
+          </div>
+          <span style="color: var(--faint); font-size: 12px;">Built with Astro</span>
+        </footer>
+      </main>
     </div>
   </body>
 </html>
