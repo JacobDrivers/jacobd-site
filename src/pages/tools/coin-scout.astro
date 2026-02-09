@@ -4,9 +4,12 @@ import CoinScout from '../../components/CoinScout.jsx';
 ---
 
 <Layout>
-  <div class="mb-4">
-    <a href="/" class="text-amber-400 hover:text-amber-300 transition-colors text-sm">
-      ← Back to Home
+  <div class="mb-4 rounded-2xl border border-slate-700/60 bg-slate-900/70 px-3 py-2 shadow-lg shadow-slate-900/30">
+    <a
+      href="/"
+      class="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/15 px-3 py-1.5 text-xs font-semibold tracking-wide text-amber-100 transition-colors hover:border-amber-300/60 hover:bg-amber-500/25"
+    >
+      ← Return to home
     </a>
   </div>
   <CoinScout client:idle />

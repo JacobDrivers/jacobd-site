@@ -9,6 +9,10 @@ Personal website and small toolkit collection. Built with Astro and React, the s
 
 ![screenshot](public/screenshot.png?v=2)
 
+**CoinScout tool preview**
+
+![CoinScout tool screenshot](public/CoinScout-Screenshot-v2.png)
+
 **Table of contents**
 
 - [About](#about)
