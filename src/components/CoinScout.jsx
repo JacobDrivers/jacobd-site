@@ -189,6 +189,11 @@ export default function CoinScout() {
     setLoading(false);
   };
 
+  // Fetch spot prices on component mount
+  useEffect(() => {
+    fetchSpotPrices();
+  }, []);
+
   // Calculate melt value
   const calculateMelt = (asw, quantity = 1) => {
     return (asw * spotPrices.silver * quantity).toFixed(2);
