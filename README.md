@@ -5,7 +5,7 @@ Personal website and small toolkit collection. Built with Astro and React, the s
 
 [![Site](https://img.shields.io/badge/site-live-brightgreen)](https://jacobd-site.pages.dev) [![Astro](https://img.shields.io/badge/built%20with-Astro-ff5e00)](https://astro.build) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-![screenshot](public/screenshot.svg)
+![screenshot](public/screenshot.png)
 
 Quick link: Live demo — https://jacobd-site.pages.dev
 
