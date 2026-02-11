@@ -3,17 +3,18 @@ import Layout from '../../layouts/Layout.astro';
 
 const tools = [
   { name: "Coin & Currency Scout", href: "/tools/coin-scout", status: "Live" },
+  { name: "The Devourer", href: "/tools/monster-game", status: "Live" },
 ];
 ---
 
 <Layout>
   <div class="tools-page">
     <div class="tools-header">
+      <a class="tools-home-btn" href="/">← Home</a>
       <div>
         <h1>Tools</h1>
         <p>Small utilities that are meant to be shared and used.</p>
       </div>
-      <a class="tools-home-btn" href="/">Home</a>
     </div>
 
     <div class="tools-list">
@@ -41,11 +42,27 @@ const tools = [
 
   .tools-header {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 16px;
     margin-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  }
+
+  .tools-home-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.72);
+    text-decoration: none;
+    transition: color 120ms ease;
+    font-weight: 500;
+    font-size: 14px;
+    width: fit-content;
+  }
+
+  .tools-home-btn:hover {
+    color: rgba(255, 255, 255, 0.92);
   }
 
   .tools-header h1 {
@@ -56,15 +73,6 @@ const tools = [
   .tools-header p {
     margin: 8px 0 0 0;
     color: rgba(255, 255, 255, 0.7);
-  }
-
-  .tools-home-btn {
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.06);
-    padding: 10px 14px;
-    border-radius: 12px;
-    font-weight: 600;
-    display: inline-block;
   }
 
   .tools-list {

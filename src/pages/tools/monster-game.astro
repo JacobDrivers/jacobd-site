@@ -1,0 +1,966 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout>
+  <div class="game-container">
+    <div class="game-header">
+      <a class="back-btn" href="/tools">← Tools</a>
+      <div class="game-info">
+        <div>
+          <h1>The Devourer</h1>
+          <div class="stats">
+            <span class="stat">Biomass: <span id="biomass">5</span></span>
+            <span class="stat">Consumed: <span id="consumed">0</span></span>
+          </div>
+        </div>
+        <div class="controls-info">
+          <span class="desktop-controls">WASD/Arrows: Move • Mouse: Grab</span>
+          <span class="mobile-controls">Touch left/right to move • Tap to grab</span>
+        </div>
+      </div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <div class="game-tips">
+      <p>🎯 You are a tentacled horror • Move along surfaces • Click to extend tentacles and grab victims</p>
+      <p>💀 Consume humans to grow your biomass • 🧬 Larger mass = more tentacles and power</p>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  .game-container {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  .game-header {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+  }
+
+  .game-header .back-btn {
+    align-self: flex-start;
+  }
+
+  .game-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .game-info h1 {
+    margin: 0;
+    font-size: 32px;
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 10px rgba(255, 68, 68, 0.3));
+  }
+
+  .stats {
+    display: flex;
+    gap: 16px;
+    margin-top: 6px;
+    font-size: 14px;
+  }
+
+  .stat {
+    color: #94a3b8;
+  }
+
+  .stat span {
+    color: #ff4444;
+    font-weight: bold;
+  }
+
+  .controls-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .mobile-controls {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    .desktop-controls {
+      display: none;
+    }
+    .mobile-controls {
+      display: block;
+    }
+  }
+
+  .back-btn {
+    padding: 8px 16px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.72);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: color 0.2s;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .back-btn:hover {
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  #gameCanvas {
+    border: 2px solid #1e293b;
+    border-radius: 8px;
+    background: #000;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+    max-width: 100%;
+    display: block;
+  }
+
+  .game-tips {
+    margin-top: 16px;
+    max-width: 1200px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .game-tips p {
+    margin: 0;
+    font-size: 13px;
+    color: #64748b;
+  }
+
+  @media (max-width: 768px) {
+    .game-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .game-info h1 {
+      font-size: 24px;
+    }
+
+    .game-tips {
+      flex-direction: column;
+      gap: 8px;
+    }
+  }
+</style>
+
+<script>
+  // === CONSTANTS ===
+  const CANVAS_WIDTH = 1200;
+  const CANVAS_HEIGHT = 700;
+  const GRAVITY = 0.5;
+  const FRICTION = 0.85;
+  const TENTACLE_REACH = 200;
+  
+  // === TYPES ===
+  type Vector = { x: number; y: number };
+  type TentacleSegment = Vector & { vx: number; vy: number; angle: number };
+  type Tentacle = {
+    segments: TentacleSegment[];
+    targetX: number;
+    targetY: number;
+    grabbing: boolean;
+    grabbedEntity: any;
+    active: boolean;
+    baseAngle: number;
+  };
+  type Platform = { x: number; y: number; width: number; height: number; type: string };
+  type Human = Vector & {
+    vx: number;
+    vy: number;
+    state: string;
+    health: number;
+    grabbed: boolean;
+    width: number;
+    height: number;
+  };
+  type Particle = Vector & {
+    vx: number;
+    vy: number;
+    life: number;
+    color: string;
+    size: number;
+  };
+
+  // === GAME STATE ===
+  let gameRunning = true;
+  let time = 0;
+  
+  let player = {
+    x: 300,
+    y: 300,
+    vx: 0,
+    vy: 0,
+    size: 40,
+    biomass: 5,
+    grounded: false,
+    onWall: false,
+    onCeiling: false,
+    moveSpeed: 3,
+    climbSpeed: 2,
+    tentacles: [] as Tentacle[],
+  };
+
+  let camera = {
+    x: 0,
+    y: 0,
+    targetX: 0,
+    targetY: 0,
+  };
+
+  let platforms: Platform[] = [];
+  let humans: Human[] = [];
+  let particles: Particle[] = [];
+  let consumed = 0;
+
+  let keys: { [key: string]: boolean } = {};
+  let mouse = { x: 0, y: 0, worldX: 0, worldY: 0, down: false };
+
+  // === CANVAS SETUP ===
+  const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+
+  function resizeCanvas() {
+    const maxWidth = Math.min(CANVAS_WIDTH, window.innerWidth - 40);
+    const maxHeight = Math.min(CANVAS_HEIGHT, window.innerHeight - 250);
+    const scale = Math.min(maxWidth / CANVAS_WIDTH, maxHeight / CANVAS_HEIGHT);
+    
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+    canvas.style.width = `${CANVAS_WIDTH * scale}px`;
+    canvas.style.height = `${CANVAS_HEIGHT * scale}px`;
+  }
+
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  // === INPUT ===
+  window.addEventListener('keydown', (e) => {
+    keys[e.key.toLowerCase()] = true;
+  });
+
+  window.addEventListener('keyup', (e) => {
+    keys[e.key.toLowerCase()] = false;
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = CANVAS_WIDTH / rect.width;
+    const scaleY = CANVAS_HEIGHT / rect.height;
+    
+    mouse.x = (e.clientX - rect.left) * scaleX;
+    mouse.y = (e.clientY - rect.top) * scaleY;
+    mouse.worldX = mouse.x + camera.x;
+    mouse.worldY = mouse.y + camera.y;
+  });
+
+  canvas.addEventListener('mousedown', () => {
+    mouse.down = true;
+    extendTentacle();
+  });
+
+  canvas.addEventListener('mouseup', () => {
+    mouse.down = false;
+  });
+
+  // Touch support
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const scaleX = CANVAS_WIDTH / rect.width;
+    const scaleY = CANVAS_HEIGHT / rect.height;
+    
+    mouse.x = (touch.clientX - rect.left) * scaleX;
+    mouse.y = (touch.clientY - rect.top) * scaleY;
+    mouse.worldX = mouse.x + camera.x;
+    mouse.worldY = mouse.y + camera.y;
+    mouse.down = true;
+    extendTentacle();
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    const scaleX = CANVAS_WIDTH / rect.width;
+    const scaleY = CANVAS_HEIGHT / rect.height;
+    
+    mouse.x = (touch.clientX - rect.left) * scaleX;
+    mouse.y = (touch.clientY - rect.top) * scaleY;
+    mouse.worldX = mouse.x + camera.x;
+    mouse.worldY = mouse.y + camera.y;
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', () => {
+    mouse.down = false;
+  });
+
+  // === INITIALIZATION ===
+  function initGame() {
+    // Create level platforms
+    platforms = [
+      // Floor
+      { x: 0, y: 650, width: 2000, height: 50, type: 'floor' },
+      
+      // Starting area
+      { x: 0, y: 0, width: 20, height: 700, type: 'wall' },
+      { x: 200, y: 500, width: 300, height: 30, type: 'platform' },
+      { x: 600, y: 400, width: 200, height: 30, type: 'platform' },
+      { x: 900, y: 450, width: 250, height: 30, type: 'platform' },
+      
+      // Ceiling sections
+      { x: 400, y: 0, width: 400, height: 30, type: 'ceiling' },
+      { x: 1000, y: 0, width: 500, height: 30, type: 'ceiling' },
+      
+      // Walls
+      { x: 800, y: 450, width: 30, height: 200, type: 'wall' },
+      { x: 1200, y: 300, width: 30, height: 350, type: 'wall' },
+      
+      // More platforms
+      { x: 1300, y: 500, width: 300, height: 30, type: 'platform' },
+      { x: 1700, y: 400, width: 250, height: 30, type: 'platform' },
+      
+      // End wall
+      { x: 1980, y: 0, width: 20, height: 700, type: 'wall' },
+    ];
+
+    // Spawn humans
+    spawnHuman(400, 470);
+    spawnHuman(700, 370);
+    spawnHuman(1000, 420);
+    spawnHuman(1400, 470);
+    spawnHuman(1750, 370);
+
+    // Initialize tentacles
+    const tentacleCount = Math.floor(player.biomass / 2) + 2;
+    for (let i = 0; i < tentacleCount; i++) {
+      createTentacle(i);
+    }
+  }
+
+  function createTentacle(index: number) {
+    const tentacle: Tentacle = {
+      segments: [],
+      targetX: player.x,
+      targetY: player.y,
+      grabbing: false,
+      grabbedEntity: null,
+      active: false,
+      baseAngle: (index / (Math.floor(player.biomass / 2) + 2)) * Math.PI * 2,
+    };
+
+    // Create segments
+    const segmentCount = 8;
+    for (let i = 0; i < segmentCount; i++) {
+      tentacle.segments.push({
+        x: player.x,
+        y: player.y,
+        vx: 0,
+        vy: 0,
+        angle: 0,
+      });
+    }
+
+    player.tentacles.push(tentacle);
+  }
+
+  function spawnHuman(x: number, y: number) {
+    humans.push({
+      x,
+      y,
+      vx: 0,
+      vy: 0,
+      state: 'idle',
+      health: 100,
+      grabbed: false,
+      width: 12,
+      height: 24,
+    });
+  }
+
+  // === TENTACLE SYSTEM ===
+  function extendTentacle() {
+    // Find available tentacle
+    let tentacle = player.tentacles.find(t => !t.active);
+    if (!tentacle) return;
+
+    const dist = Math.hypot(mouse.worldX - player.x, mouse.worldY - player.y);
+    if (dist > TENTACLE_REACH) return;
+
+    tentacle.active = true;
+    tentacle.targetX = mouse.worldX;
+    tentacle.targetY = mouse.worldY;
+
+    // Check if grabbing human
+    humans.forEach(human => {
+      if (!human.grabbed) {
+        const hDist = Math.hypot(mouse.worldX - human.x, mouse.worldY - human.y);
+        if (hDist < 40) {
+          tentacle.grabbing = true;
+          tentacle.grabbedEntity = human;
+          human.grabbed = true;
+          human.state = 'grabbed';
+        }
+      }
+    });
+  }
+
+  function updateTentacles() {
+    player.tentacles.forEach((tentacle, index) => {
+      if (tentacle.active) {
+        // Update target position for grabbed entities
+        if (tentacle.grabbing && tentacle.grabbedEntity) {
+          const human = tentacle.grabbedEntity;
+          
+          // Pull human toward player
+          const dx = player.x - human.x;
+          const dy = player.y - human.y;
+          const dist = Math.hypot(dx, dy);
+          
+          if (dist < player.size + 20) {
+            // Consume human
+            consumeHuman(human);
+            tentacle.grabbing = false;
+            tentacle.grabbedEntity = null;
+            tentacle.active = false;
+          } else {
+            human.x += (dx / dist) * 3;
+            human.y += (dy / dist) * 3;
+            tentacle.targetX = human.x;
+            tentacle.targetY = human.y;
+          }
+        }
+
+        // Update tentacle segments with inverse kinematics
+        updateTentacleIK(tentacle);
+
+        // Deactivate if not grabbing and mouse not down
+        if (!tentacle.grabbing && !mouse.down) {
+          tentacle.active = false;
+        }
+      } else {
+        // Retract tentacle to player
+        retractTentacle(tentacle);
+      }
+    });
+  }
+
+  function updateTentacleIK(tentacle: Tentacle) {
+    const segments = tentacle.segments;
+    const segmentLength = 15;
+
+    // Forward reaching - start from base (player)
+    segments[0].x = player.x;
+    segments[0].y = player.y;
+
+    // Backward reaching - start from target
+    let targetX = tentacle.targetX;
+    let targetY = tentacle.targetY;
+
+    // FABRIK algorithm (simplified)
+    for (let iteration = 0; iteration < 3; iteration++) {
+      // Backward pass
+      segments[segments.length - 1].x = targetX;
+      segments[segments.length - 1].y = targetY;
+
+      for (let i = segments.length - 2; i >= 0; i--) {
+        const dx = segments[i].x - segments[i + 1].x;
+        const dy = segments[i].y - segments[i + 1].y;
+        const dist = Math.hypot(dx, dy);
+        
+        if (dist > 0) {
+          segments[i].x = segments[i + 1].x + (dx / dist) * segmentLength;
+          segments[i].y = segments[i + 1].y + (dy / dist) * segmentLength;
+        }
+      }
+
+      // Forward pass
+      segments[0].x = player.x;
+      segments[0].y = player.y;
+
+      for (let i = 1; i < segments.length; i++) {
+        const dx = segments[i].x - segments[i - 1].x;
+        const dy = segments[i].y - segments[i - 1].y;
+        const dist = Math.hypot(dx, dy);
+        
+        if (dist > 0) {
+          segments[i].x = segments[i - 1].x + (dx / dist) * segmentLength;
+          segments[i].y = segments[i - 1].y + (dy / dist) * segmentLength;
+        }
+      }
+    }
+  }
+
+  function retractTentacle(tentacle: Tentacle) {
+    tentacle.segments.forEach((segment, i) => {
+      segment.x += (player.x - segment.x) * 0.2;
+      segment.y += (player.y - segment.y) * 0.2;
+    });
+  }
+
+  // === PHYSICS ===
+  function updatePlayer() {
+    // Movement input
+    let moveX = 0;
+    if (keys['a'] || keys['arrowleft']) moveX = -1;
+    if (keys['d'] || keys['arrowright']) moveX = 1;
+
+    // Apply movement
+    if (player.onWall) {
+      // Wall climbing
+      let moveY = 0;
+      if (keys['w'] || keys['arrowup']) moveY = -1;
+      if (keys['s'] || keys['arrowdown']) moveY = 1;
+      
+      player.vy = moveY * player.climbSpeed;
+      player.vx = moveX * player.moveSpeed * 0.5;
+    } else if (player.onCeiling) {
+      // Ceiling crawling
+      player.vx = moveX * player.moveSpeed;
+      player.vy = 1; // Stick to ceiling
+    } else if (player.grounded) {
+      // Ground movement
+      player.vx = moveX * player.moveSpeed;
+    } else {
+      // Air control
+      player.vx += moveX * 0.3;
+    }
+
+    // Apply gravity (unless on ceiling or wall)
+    if (!player.onCeiling && !player.onWall) {
+      player.vy += GRAVITY;
+    }
+
+    // Apply friction
+    if (player.grounded) {
+      player.vx *= FRICTION;
+    }
+
+    // Limit velocity
+    player.vx = Math.max(-8, Math.min(8, player.vx));
+    player.vy = Math.max(-15, Math.min(15, player.vy));
+
+    // Update position
+    player.x += player.vx;
+    player.y += player.vy;
+
+    // Collision detection
+    checkCollisions();
+
+    // Update tentacles
+    updateTentacles();
+  }
+
+  function checkCollisions() {
+    player.grounded = false;
+    player.onWall = false;
+    player.onCeiling = false;
+
+    platforms.forEach(platform => {
+      // Simple AABB collision
+      if (
+        player.x + player.size > platform.x &&
+        player.x - player.size < platform.x + platform.width &&
+        player.y + player.size > platform.y &&
+        player.y - player.size < platform.y + platform.height
+      ) {
+        // Determine collision side
+        const overlapLeft = (player.x + player.size) - platform.x;
+        const overlapRight = (platform.x + platform.width) - (player.x - player.size);
+        const overlapTop = (player.y + player.size) - platform.y;
+        const overlapBottom = (platform.y + platform.height) - (player.y - player.size);
+
+        const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+        if (minOverlap === overlapTop && player.vy >= 0) {
+          // Collision from top (player standing on platform)
+          player.y = platform.y - player.size;
+          player.vy = 0;
+          player.grounded = true;
+        } else if (minOverlap === overlapBottom && player.vy <= 0) {
+          // Collision from bottom (ceiling)
+          player.y = platform.y + platform.height + player.size;
+          player.vy = 0;
+          player.onCeiling = true;
+        } else if (minOverlap === overlapLeft) {
+          // Collision from left (wall)
+          player.x = platform.x - player.size;
+          player.vx = 0;
+          player.onWall = true;
+        } else if (minOverlap === overlapRight) {
+          // Collision from right (wall)
+          player.x = platform.x + platform.width + player.size;
+          player.vx = 0;
+          player.onWall = true;
+        }
+      }
+    });
+  }
+
+  function updateHumans() {
+    humans.forEach((human, index) => {
+      if (human.state === 'grabbed') return;
+
+      // Apply gravity
+      human.vy += GRAVITY;
+
+      // Simple movement AI
+      if (human.state === 'idle') {
+        const distToPlayer = Math.hypot(player.x - human.x, player.y - human.y);
+        if (distToPlayer < 300) {
+          human.state = 'fleeing';
+        }
+      }
+
+      if (human.state === 'fleeing') {
+        const dx = human.x - player.x;
+        human.vx = dx > 0 ? 2 : -2;
+      }
+
+      // Update position
+      human.x += human.vx;
+      human.y += human.vy;
+
+      // Simple ground collision
+      platforms.forEach(platform => {
+        if (
+          human.x + human.width / 2 > platform.x &&
+          human.x - human.width / 2 < platform.x + platform.width &&
+          human.y + human.height / 2 > platform.y &&
+          human.y + human.height / 2 < platform.y + 20 &&
+          human.vy >= 0
+        ) {
+          human.y = platform.y - human.height / 2;
+          human.vy = 0;
+        }
+      });
+
+      // Friction
+      human.vx *= 0.8;
+    });
+  }
+
+  function consumeHuman(human: Human) {
+    const index = humans.indexOf(human);
+    if (index > -1) {
+      humans.splice(index, 1);
+      player.biomass += 1;
+      consumed++;
+
+      // Add tentacle if needed
+      const tentacleCount = Math.floor(player.biomass / 2) + 2;
+      if (player.tentacles.length < tentacleCount) {
+        createTentacle(player.tentacles.length);
+      }
+
+      // Grow slightly
+      player.size = 30 + player.biomass * 2;
+
+      // Create particles
+      createParticles(human.x, human.y, '#ff0000', 20);
+
+      // Update UI
+      updateUI();
+    }
+  }
+
+  function updateParticles() {
+    particles = particles.filter(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.2; // Gravity
+      p.vx *= 0.98;
+      p.vy *= 0.98;
+      p.life -= 0.02;
+      return p.life > 0;
+    });
+  }
+
+  function createParticles(x: number, y: number, color: string, count: number) {
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 6,
+        vy: (Math.random() - 0.5) * 6 - 2,
+        life: 1.0,
+        color,
+        size: Math.random() * 3 + 2,
+      });
+    }
+  }
+
+  // === CAMERA ===
+  function updateCamera() {
+    camera.targetX = player.x - CANVAS_WIDTH / 2;
+    camera.targetY = player.y - CANVAS_HEIGHT / 2;
+
+    // Smooth follow
+    camera.x += (camera.targetX - camera.x) * 0.1;
+    camera.y += (camera.targetY - camera.y) * 0.1;
+
+    // Clamp camera
+    camera.x = Math.max(0, Math.min(2000 - CANVAS_WIDTH, camera.x));
+    camera.y = Math.max(0, Math.min(700 - CANVAS_HEIGHT, camera.y));
+  }
+
+  // === RENDERING ===
+  function render() {
+    // Clear
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    ctx.save();
+    ctx.translate(-camera.x, -camera.y);
+
+    // Draw background grid
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < 2000; x += 50) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, 700);
+      ctx.stroke();
+    }
+
+    // Draw platforms
+    platforms.forEach(platform => {
+      ctx.fillStyle = platform.type === 'floor' ? '#2a2a2a' : '#333333';
+      ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+      
+      // Edge highlight
+      ctx.strokeStyle = '#404040';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+    });
+
+    // Draw particles
+    particles.forEach(p => {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    // Draw humans
+    humans.forEach(human => {
+      if (human.state === 'grabbed') return;
+
+      // Body
+      ctx.fillStyle = '#ffccaa';
+      ctx.fillRect(human.x - human.width / 2, human.y - human.height / 2, human.width, human.height);
+      
+      // Head
+      ctx.beginPath();
+      ctx.arc(human.x, human.y - human.height / 2 - 5, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eyes (if fleeing)
+      if (human.state === 'fleeing') {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(human.x - 2, human.y - human.height / 2 - 7, 2, 2);
+        ctx.fillRect(human.x + 1, human.y - human.height / 2 - 7, 2, 2);
+      }
+    });
+
+    // Draw player body
+    drawPlayerBody();
+
+    // Draw tentacles
+    player.tentacles.forEach(tentacle => {
+      drawTentacle(tentacle);
+    });
+
+    ctx.restore();
+
+    // Draw cursor
+    if (mouse.x && mouse.y) {
+      const dist = Math.hypot(mouse.worldX - player.x, mouse.worldY - player.y);
+      const canReach = dist <= TENTACLE_REACH;
+      
+      ctx.strokeStyle = canReach ? '#ff4444' : '#666666';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, 10, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Line from player to cursor
+      ctx.globalAlpha = 0.3;
+      ctx.beginPath();
+      ctx.moveTo(player.x - camera.x, player.y - camera.y);
+      ctx.lineTo(mouse.x, mouse.y);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawPlayerBody() {
+    // Draw organic blob body
+    ctx.save();
+    ctx.translate(player.x, player.y);
+
+    // Pulsing organic shape
+    ctx.beginPath();
+    const points = 12;
+    for (let i = 0; i <= points; i++) {
+      const angle = (i / points) * Math.PI * 2;
+      const wobble = Math.sin(time * 0.003 + i * 0.5) * (player.size * 0.15);
+      const radius = player.size + wobble;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+
+    // Gradient fill
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, player.size);
+    gradient.addColorStop(0, '#ff0000');
+    gradient.addColorStop(0.5, '#cc0000');
+    gradient.addColorStop(1, '#880000');
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Glow effect
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 20;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Veins/details
+    ctx.strokeStyle = '#990000';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 + time * 0.001;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(
+        Math.cos(angle) * player.size * 0.7,
+        Math.sin(angle) * player.size * 0.7
+      );
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function drawTentacle(tentacle: Tentacle) {
+    if (tentacle.segments.length === 0) return;
+
+    ctx.save();
+
+    // Draw tentacle segments
+    ctx.strokeStyle = '#cc0000';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Gradient thickness
+    for (let i = 0; i < tentacle.segments.length - 1; i++) {
+      const segment = tentacle.segments[i];
+      const nextSegment = tentacle.segments[i + 1];
+      
+      const thickness = 8 - (i / tentacle.segments.length) * 6;
+      ctx.lineWidth = thickness;
+
+      ctx.beginPath();
+      ctx.moveTo(segment.x, segment.y);
+      ctx.lineTo(nextSegment.x, nextSegment.y);
+      ctx.stroke();
+    }
+
+    // Draw tip
+    if (tentacle.active) {
+      const tip = tentacle.segments[tentacle.segments.length - 1];
+      
+      // Grasping end
+      ctx.fillStyle = '#ff0000';
+      ctx.beginPath();
+      ctx.arc(tip.x, tip.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Claws
+      for (let i = 0; i < 4; i++) {
+        const angle = (i / 4) * Math.PI * 2 + time * 0.01;
+        const length = tentacle.grabbing ? 8 : 12;
+        ctx.strokeStyle = '#ff0000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(tip.x, tip.y);
+        ctx.lineTo(
+          tip.x + Math.cos(angle) * length,
+          tip.y + Math.sin(angle) * length
+        );
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // === UI ===
+  function updateUI() {
+    const biomassEl = document.getElementById('biomass');
+    const consumedEl = document.getElementById('consumed');
+    
+    if (biomassEl) biomassEl.textContent = player.biomass.toString();
+    if (consumedEl) consumedEl.textContent = consumed.toString();
+  }
+
+  // === GAME LOOP ===
+  let lastTime = performance.now();
+
+  function gameLoop() {
+    if (!gameRunning) return;
+
+    const currentTime = performance.now();
+    const dt = Math.min(currentTime - lastTime, 50);
+    lastTime = currentTime;
+    time = currentTime;
+
+    updatePlayer();
+    updateHumans();
+    updateParticles();
+    updateCamera();
+    render();
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  // === START ===
+  initGame();
+  gameLoop();
+</script>

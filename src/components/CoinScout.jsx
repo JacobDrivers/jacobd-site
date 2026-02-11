@@ -169,36 +169,78 @@ export default function CoinScout() {
   }, [inventory]);
 
   // Fetch spot prices via API route
-  const fetchSpotPrices = async () => {
+  const fetchSpotPrices = async (forceRefresh = false) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/metals.json');
+      const url = forceRefresh ? '/api/metals.json?force=1' : '/api/metals.json';
+      const response = await fetch(url);
       const data = await response.json();
       
       const silver = parseFloat(data.silver);
       const gold = parseFloat(data.gold);
       
       if (!isNaN(silver) && !isNaN(gold) && silver > 0 && gold > 0) {
+        let statusLabel = '';
+        
+        if (data.cached) {
+          if (data.stale) {
+            statusLabel = `[STALE CACHE - ${data.cacheAge}s old]`;
+          } else {
+            const minutesOld = Math.floor(data.cacheAge / 60);
+            const secondsOld = data.cacheAge % 60;
+            statusLabel = `[CACHED ${minutesOld}m ${secondsOld}s ago]`;
+          }
+        }
+        
         const source = data.source ? ` (${data.source})` : '';
-        const staleIndicator = data.stale ? ' [CACHED]' : '';
         const errorIndicator = data.error ? ` - Warning: ${data.error}` : '';
         
-        setSpotPrices({
+        const priceData = {
           silver,
           gold,
-          updated: new Date().toLocaleTimeString() + source + staleIndicator + errorIndicator
-        });
+          updated: new Date().toLocaleTimeString() + source + statusLabel + errorIndicator
+        };
+        
+        setSpotPrices(priceData);
+        
+        // Cache to localStorage as fallback
+        localStorage.setItem('spotPrices', JSON.stringify(priceData));
       } else {
-        // Use fallback values if parsing fails
-        setSpotPrices({
-          silver: 31.5,
-          gold: 2750,
-          updated: 'Error loading prices - using fallback'
-        });
+        // Try to use localStorage fallback
+        const savedPrices = localStorage.getItem('spotPrices');
+        if (savedPrices) {
+          const fallback = JSON.parse(savedPrices);
+          setSpotPrices({
+            ...fallback,
+            updated: fallback.updated + ' [LOCAL CACHE FALLBACK]'
+          });
+        } else {
+          // Last resort hardcoded defaults
+          setSpotPrices({
+            silver: 32.50,
+            gold: 2650,
+            updated: 'Using fallback prices - API failed and no cached data'
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to fetch prices:', error);
-      setSpotPrices(prev => ({ ...prev, updated: 'Error - see console' }));
+      
+      // Try localStorage fallback
+      const savedPrices = localStorage.getItem('spotPrices');
+      if (savedPrices) {
+        const fallback = JSON.parse(savedPrices);
+        setSpotPrices({
+          ...fallback,
+          updated: fallback.updated + ' [LOCAL CACHE - ERROR]'
+        });
+      } else {
+        setSpotPrices({
+          silver: 32.50,
+          gold: 2650,
+          updated: 'Error - see console (using fallback)'
+        });
+      }
     }
     setLoading(false);
   };
@@ -208,6 +250,18 @@ export default function CoinScout() {
     let isMounted = true;
     
     const loadPrices = async () => {
+      // Check localStorage first for previous prices
+      const savedPrices = localStorage.getItem('spotPrices');
+      if (savedPrices && isMounted) {
+        try {
+          const prices = JSON.parse(savedPrices);
+          setSpotPrices(prices);
+        } catch (e) {
+          console.error('Failed to parse cached prices:', e);
+        }
+      }
+      
+      // Then fetch fresh prices
       await fetchSpotPrices();
     };
     
@@ -255,6 +309,13 @@ export default function CoinScout() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4">
       <div className="max-w-6xl mx-auto">
+        {/* Top Navigation */}
+        <nav className="mb-6 pb-4 border-b border-slate-700/50">
+          <a href="/tools" className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-200 transition-colors text-sm font-medium">
+            ← Back to tools
+          </a>
+        </nav>
+
         {/* Header */}
         <header className="mb-8">
           <div className="flex items-center justify-between">
@@ -275,11 +336,20 @@ export default function CoinScout() {
                   <div className="text-2xl font-bold text-yellow-400">${spotPrices.gold.toFixed(0)}</div>
                 </div>
                 <button
-                  onClick={fetchSpotPrices}
+                  onClick={() => fetchSpotPrices(false)}
                   disabled={loading}
                   className="p-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors disabled:opacity-50"
+                  title="Refresh with cache (if fresh)"
                 >
-                  <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                  <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                </button>
+                <button
+                  onClick={() => fetchSpotPrices(true)}
+                  disabled={loading}
+                  className="px-2 py-2 text-xs bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors disabled:opacity-50"
+                  title="Force refresh (bypass cache)"
+                >
+                  Force
                 </button>
               </div>
               <div className="text-xs text-slate-500 mt-1">Updated: {spotPrices.updated || 'Click refresh'}</div>

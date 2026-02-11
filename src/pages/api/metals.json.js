@@ -30,27 +30,91 @@ async function fetchFromMetalsDev(apiKey) {
 }
 
 async function fetchFromCoinGecko() {
-  const response = await fetch(
-    'https://api.coingecko.com/api/v3/simple/price?ids=gold,silver&vs_currencies=usd'
-  );
-  
-  if (!response.ok) {
-    throw new Error(`CoinGecko API responded with status ${response.status}`);
-  }
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    
+    const response = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=gold,silver&vs_currencies=usd',
+      { signal: controller.signal }
+    );
+    
+    clearTimeout(timeout);
+    
+    if (!response.ok) {
+      throw new Error(`CoinGecko API responded with status ${response.status}`);
+    }
 
-  const data = await response.json();
-  
-  return {
-    silver: data.silver?.usd,
-    gold: data.gold?.usd,
-    source: 'coingecko'
-  };
+    const data = await response.json();
+    
+    const silver = data.silver?.usd;
+    const gold = data.gold?.usd;
+    
+    // Validate we got valid numbers
+    if (typeof silver !== 'number' || typeof gold !== 'number' || silver <= 0 || gold <= 0) {
+      throw new Error(`CoinGecko returned invalid prices - Silver: ${silver}, Gold: ${gold}`);
+    }
+    
+    return {
+      silver,
+      gold,
+      source: 'coingecko'
+    };
+  } catch (error) {
+    throw new Error(`CoinGecko fetch failed: ${error.message}`);
+  }
 }
 
-export async function GET() {
-  // Return cached prices if still fresh
-  if (cachedPrices && cacheTime && Date.now() - cacheTime < CACHE_DURATION) {
-    return new Response(JSON.stringify(cachedPrices), {
+async function fetchFromOpenMetrics() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    
+    // Using metals API with free tier
+    const response = await fetch(
+      'https://api.metals.live/v1/spot/metals?symbols=AU,AG',
+      { signal: controller.signal }
+    );
+    
+    clearTimeout(timeout);
+    
+    if (!response.ok) {
+      throw new Error(`Metals.live API responded with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // metals.live returns prices in different currencies, use USD
+    const silver = data.metals?.AG?.USD || data.metals?.AG || null;
+    const gold = data.metals?.AU?.USD || data.metals?.AU || null;
+    
+    // Validate we got valid numbers
+    if (typeof silver !== 'number' || typeof gold !== 'number' || silver <= 0 || gold <= 0) {
+      throw new Error(`Metals.live returned invalid prices - Silver: ${silver}, Gold: ${gold}`);
+    }
+    
+    return {
+      silver,
+      gold,
+      source: 'metals.live'
+    };
+  } catch (error) {
+    throw new Error(`Metals.live fetch failed: ${error.message}`);
+  }
+}
+
+export async function GET({ url }) {
+  // Check for 'force' query parameter to bypass cache
+  const forceRefresh = url.searchParams.has('force');
+
+  // Return cached prices if still fresh (and not force-refreshing)
+  if (!forceRefresh && cachedPrices && cacheTime && Date.now() - cacheTime < CACHE_DURATION) {
+    return new Response(JSON.stringify({
+      ...cachedPrices,
+      cached: true,
+      cacheAge: Math.floor((Date.now() - cacheTime) / 1000),
+      cacheExpires: Math.floor((CACHE_DURATION - (Date.now() - cacheTime)) / 1000)
+    }), {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
@@ -79,22 +143,30 @@ export async function GET() {
     }
   }
 
-  // Only fallback to CoinGecko if metals.dev completely failed and no cache
-  if (!priceData && !cachedPrices) {
+  // Try CoinGecko as first backup (free, unlimited calls)
+  if (!priceData) {
     try {
-      priceData = await fetchFromCoinGecko();
+      priceData = await fetchFromOpenMetrics();
       if (!priceData.silver || !priceData.gold) {
-        throw new Error('Missing silver or gold in CoinGecko response');
+        throw new Error('Missing silver or gold in metals.live response');
       }
     } catch (err) {
+      console.error('Metals.live failed:', err.message);
       error = err.message;
       priceData = null;
     }
   }
 
-  // Return cached prices if available
+  // Return cached prices if available (stale but better than nothing)
   if (!priceData && cachedPrices) {
-    return new Response(JSON.stringify({ ...cachedPrices, stale: true, source: `${cachedPrices.source} [CACHED]` }), {
+    return new Response(JSON.stringify({ 
+      ...cachedPrices, 
+      cached: true,
+      stale: true, 
+      source: `${cachedPrices.source} [STALE CACHE]`,
+      cacheAge: Math.floor((Date.now() - cacheTime) / 1000),
+      error: error
+    }), {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
@@ -103,16 +175,18 @@ export async function GET() {
     });
   }
 
-  // Last resort: return hardcoded defaults
+  // Last resort: return hardcoded fallback prices
   if (!priceData) {
-    // Production: suppress verbose logging for fallback
+    // Return reasonable fallback prices (approximate current spot)
+    // These serve as local development defaults
     return new Response(
       JSON.stringify({ 
-        silver: 31.5,
-        gold: 2750,
+        silver: 32.50,
+        gold: 2650,
         source: 'fallback',
-        error: error,
-        message: 'Using default prices - API temporarily unavailable'
+        cached: false,
+        error: error || 'No API key configured and external APIs unavailable',
+        message: 'Using fallback prices. Deploy with METALS_API_KEY for live prices.'
       }), 
       {
         status: 200,
@@ -131,6 +205,7 @@ export async function GET() {
         silver: 31.5,
         gold: 2750,
         source: 'fallback',
+        cached: false,
         error: 'Invalid price values received'
       }), 
       {
@@ -144,7 +219,12 @@ export async function GET() {
   cachedPrices = priceData;
   cacheTime = Date.now();
 
-  return new Response(JSON.stringify(priceData), {
+  return new Response(JSON.stringify({
+    ...priceData,
+    cached: false,
+    cacheAge: 0,
+    cacheExpires: CACHE_DURATION
+  }), {
     status: 200,
     headers: { 
       'Content-Type': 'application/json',
