@@ -307,7 +307,7 @@ export default function CoinScout() {
   }, [auctionCalc.type, auctionCalc.quantity, auctionCalc.premium, spotPrices]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4" style={{backgroundImage: 'linear-gradient(135deg, #0b1220 0%, #0b1220 100%)'}}>
       <div className="max-w-6xl mx-auto">
         {/* Top Navigation */}
         <nav className="mb-6 pb-4 border-b border-slate-700/50">
@@ -374,8 +374,9 @@ export default function CoinScout() {
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap transition-colors ${
                   view === tab.id
                     ? 'bg-amber-600 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    : 'text-slate-300 hover:opacity-80'
                 }`}
+                style={view !== tab.id ? {backgroundColor: '#2a272f'} : {}}
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
@@ -604,7 +605,7 @@ function CoinCard({ coin, onClick, spotPrice }) {
 
   return (
     <div 
-      className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden hover:border-amber-600 transition-all cursor-pointer group"
+      className="rounded-xl overflow-hidden hover:opacity-90 transition-all cursor-pointer group" style={{backgroundColor: '#25222a', borderColor: '#3a3745', borderWidth: '1px'}}
       onClick={onClick}
     >
       <div className="p-6">
@@ -733,7 +734,7 @@ function CoinDetail({ coin, onBack, spotPrice }) {
 function CurrencyCard({ currency, onClick }) {
   return (
     <div 
-      className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden hover:border-green-600 transition-all cursor-pointer group"
+      className="rounded-xl overflow-hidden hover:opacity-90 transition-all cursor-pointer group" style={{backgroundColor: '#25222a', borderColor: '#3a3745', borderWidth: '1px'}}
       onClick={onClick}
     >
       <div className="p-6">
@@ -799,7 +800,7 @@ function CurrencyDetail({ currency, onBack }) {
               <h3 className="font-bold text-blue-400 mb-3">Notable Varieties</h3>
               <ul className="space-y-1">
                 {currency.varieties.map((variety, i) => (
-                  <li key={i} className="p-2 bg-slate-700 rounded text-sm">
+                  <li key={i} className="p-2 rounded text-sm" style={{backgroundColor: '#2a272f'}}>
                     {variety}
                   </li>
                 ))}
