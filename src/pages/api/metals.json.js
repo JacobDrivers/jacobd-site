@@ -1,7 +1,40 @@
-// Cache prices for 1 hour (3600000 ms) to save API calls
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
+// Cache prices for 15 minutes to save API calls and keep pricing reasonably fresh
 let cachedPrices = null;
 let cacheTime = null;
-const CACHE_DURATION = 3600000; // 1 hour
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+const FILE_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+const FILE_CACHE_DIR = path.join(process.cwd(), '.cache');
+const FILE_CACHE_PATH = path.join(FILE_CACHE_DIR, 'metals-prices.json');
+
+async function readFileCache() {
+  try {
+    const raw = await fs.readFile(FILE_CACHE_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+
+    if (!parsed || !parsed.cachedAt || !parsed.silver || !parsed.gold) {
+      return null;
+    }
+
+    return parsed;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function writeFileCache(priceData) {
+  const payload = {
+    ...priceData,
+    cachedAt: Date.now()
+  };
+
+  await fs.mkdir(FILE_CACHE_DIR, { recursive: true });
+  await fs.writeFile(FILE_CACHE_PATH, JSON.stringify(payload), 'utf8');
+
+  return payload;
+}
 
 async function fetchFromMetalsDev(apiKey) {
   const response = await fetch(
@@ -106,6 +139,7 @@ async function fetchFromOpenMetrics() {
 export async function GET({ url }) {
   // Check for 'force' query parameter to bypass cache
   const forceRefresh = url.searchParams.has('force');
+  const fileCache = forceRefresh ? null : await readFileCache();
 
   // Return cached prices if still fresh (and not force-refreshing)
   if (!forceRefresh && cachedPrices && cacheTime && Date.now() - cacheTime < CACHE_DURATION) {
@@ -119,6 +153,33 @@ export async function GET({ url }) {
       headers: { 
         'Content-Type': 'application/json',
         'X-Cache': 'HIT'
+      }
+    });
+  }
+
+  // Return file cache if still fresh (and not force-refreshing)
+  if (
+    !forceRefresh &&
+    fileCache &&
+    Date.now() - fileCache.cachedAt < FILE_CACHE_DURATION
+  ) {
+    cachedPrices = {
+      silver: parseFloat(fileCache.silver),
+      gold: parseFloat(fileCache.gold),
+      source: fileCache.source || 'file-cache'
+    };
+    cacheTime = fileCache.cachedAt;
+
+    return new Response(JSON.stringify({
+      ...cachedPrices,
+      cached: true,
+      cacheAge: Math.floor((Date.now() - cacheTime) / 1000),
+      cacheExpires: Math.floor((FILE_CACHE_DURATION - (Date.now() - cacheTime)) / 1000)
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Cache': 'HIT-FILE'
       }
     });
   }
@@ -158,6 +219,24 @@ export async function GET({ url }) {
   }
 
   // Return cached prices if available (stale but better than nothing)
+  if (!priceData && fileCache) {
+    return new Response(JSON.stringify({
+      silver: parseFloat(fileCache.silver),
+      gold: parseFloat(fileCache.gold),
+      cached: true,
+      stale: true,
+      source: `${fileCache.source || 'file-cache'} [STALE FILE CACHE]`,
+      cacheAge: Math.floor((Date.now() - fileCache.cachedAt) / 1000),
+      error: error
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Cache': 'STALE-FILE'
+      }
+    });
+  }
+
   if (!priceData && cachedPrices) {
     return new Response(JSON.stringify({ 
       ...cachedPrices, 
@@ -218,6 +297,7 @@ export async function GET({ url }) {
   // Cache successful response
   cachedPrices = priceData;
   cacheTime = Date.now();
+  await writeFileCache(priceData);
 
   return new Response(JSON.stringify({
     ...priceData,

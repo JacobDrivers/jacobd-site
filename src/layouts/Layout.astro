@@ -1,34 +1,67 @@
 ---
 import '../styles/global.css';
+import { siteInfo } from '../data/site';
+
+interface Props {
+	title?: string;
+	description?: string;
+	ogImage?: string;
+	noIndex?: boolean;
+}
+
+const {
+	title = siteInfo.title,
+	description = siteInfo.description,
+	ogImage = siteInfo.ogImage,
+	noIndex = false,
+} = Astro.props;
+
+const canonicalURL = new URL(Astro.url.pathname, Astro.site || siteInfo.url);
+const ogImageURL = new URL(ogImage, Astro.site || siteInfo.url);
 ---
 
 <!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="generator" content={Astro.generator} />
+		<meta name="theme-color" content="#0b1220" />
+		
+		{/* Primary Meta Tags */}
+		<title>{title}</title>
+		<meta name="title" content={title} />
+		<meta name="description" content={description} />
+		<meta name="author" content={siteInfo.author} />
+		<link rel="canonical" href={canonicalURL} />
+		
+		{/* Open Graph / Facebook */}
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={canonicalURL} />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:image" content={ogImageURL} />
+		<meta property="og:site_name" content="Jacob Drury" />
+		
+		{/* Twitter */}
+		<meta property="twitter:card" content="summary_large_image" />
+		<meta property="twitter:url" content={canonicalURL} />
+		<meta property="twitter:title" content={title} />
+		<meta property="twitter:description" content={description} />
+		<meta property="twitter:image" content={ogImageURL} />
+		
+		{/* Robots */}
+		{noIndex && <meta name="robots" content="noindex, nofollow" />}
+		
+		{/* Favicons */}
 		<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 		<link rel="icon" href="/favicon.ico" />
 		<link rel="icon" href="/favicon.png" type="image/png" />
 		<link rel="shortcut icon" href="/favicon.ico" />
 		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-		<meta name="generator" content={Astro.generator} />
-		<meta name="theme-color" content="#0b1220" />
 		<link rel="manifest" href="/site.webmanifest" />
-		<title>Jacob Drury | Tools + Projects</title>
 	</head>
 	<body>
 		<slot />
 	</body>
 </html>
-
-<style>
-	html,
-	body {
-		margin: 0;
-		width: 100%;
-		height: 100%;
-			background: #0b1220;
-			color: #e2e8f0;
-	}
-</style>

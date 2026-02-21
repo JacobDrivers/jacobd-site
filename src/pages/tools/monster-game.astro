@@ -2,14 +2,17 @@
 import Layout from '../../layouts/Layout.astro';
 ---
 
-<Layout>
+<Layout 
+  title="The Devourer | Jacob Drury" 
+  description="A visceral monster evolution game. Consume, grow, and dominate. Features boss battles, power-ups, and abilities."
+>
   <div class="game-container">
     <div class="game-header">
-      <a class="back-btn" href="/tools">← Tools</a>
+      <a class="back-btn" href="/tools" aria-label="Back to tools">← Tools</a>
       <div class="game-info">
         <div>
           <h1>The Devourer</h1>
-          <div class="stats">
+          <div class="stats" role="status" aria-live="polite">
             <span class="stat">Biomass: <span id="biomass">5</span></span>
             <span class="stat">Consumed: <span id="consumed">0</span></span>
           </div>
@@ -20,7 +23,7 @@ import Layout from '../../layouts/Layout.astro';
         </div>
       </div>
     </div>
-    <canvas id="gameCanvas"></canvas>
+    <canvas id="gameCanvas" role="img" aria-label="Game canvas for The Devourer"></canvas>
     <div class="game-tips">
       <p>🎯 You are a tentacled horror • Move along surfaces • Click to extend tentacles and grab victims</p>
       <p>💀 Consume humans to grow your biomass • 🧬 Larger mass = more tentacles and power</p>

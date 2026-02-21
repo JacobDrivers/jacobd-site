@@ -154,6 +154,7 @@ export default function CoinScout() {
   const [selectedCurrency, setSelectedCurrency] = useState(null);
   const [inventory, setInventory] = useState([]);
   const [flipped, setFlipped] = useState({});
+  const LOCAL_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
   // Load inventory from localStorage
   useEffect(() => {
@@ -198,7 +199,8 @@ export default function CoinScout() {
         const priceData = {
           silver,
           gold,
-          updated: new Date().toLocaleTimeString() + source + statusLabel + errorIndicator
+          updated: new Date().toLocaleTimeString() + source + statusLabel + errorIndicator,
+          cachedAt: Date.now()
         };
         
         setSpotPrices(priceData);
@@ -256,6 +258,11 @@ export default function CoinScout() {
         try {
           const prices = JSON.parse(savedPrices);
           setSpotPrices(prices);
+
+          const cacheAge = prices.cachedAt ? Date.now() - prices.cachedAt : null;
+          if (cacheAge !== null && cacheAge < LOCAL_CACHE_TTL_MS) {
+            return;
+          }
         } catch (e) {
           console.error('Failed to parse cached prices:', e);
         }
