@@ -166,7 +166,6 @@ import Layout from '../../layouts/Layout.astro';
 
   // ── Boot ──────────────────────────────────────────────────────────────────
   function boot(){
-    console.log('🎮 Tornado Sandbox boot()');
     THREE=window.THREE;
     if(!THREE){
       console.error('THREE not loaded!');
@@ -178,7 +177,6 @@ import Layout from '../../layouts/Layout.astro';
       return;
     }
     const wrapper=canvas.parentElement;
-    console.log('Canvas:', canvas, 'Wrapper:', wrapper);
 
     scene=new THREE.Scene();
     scene.background=new THREE.Color(0x0c0d18);
@@ -282,7 +280,6 @@ import Layout from '../../layouts/Layout.astro';
     },{passive:true});
     window.addEventListener('resize',sizeRenderer);
 
-    console.log('🎮 Boot complete, scene ready');
     animate();
   }
 
