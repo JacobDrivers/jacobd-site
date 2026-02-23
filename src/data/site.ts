@@ -7,6 +7,13 @@ export const tools = [
     tag: "Tools",
   },
   {
+    name: "Tornado Sandbox",
+    desc: "Control a massive tornado and destroy everything in your path. Pure destruction sandbox with spectacular effects.",
+    href: "/tools/tornado-3d",
+    status: "Live",
+    tag: "Game",
+  },
+  {
     name: "The Devourer",
     desc: "A visceral monster evolution game. Consume, grow, and dominate. Features boss battles, power-ups, and abilities.",
     href: "/tools/monster-game",

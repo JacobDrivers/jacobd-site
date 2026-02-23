@@ -1,0 +1,664 @@
+﻿---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout 
+  title="Tornado Sandbox | Jacob Drury" 
+  description="Control a massive tornado and destroy everything in your path. Pure destruction sandbox with spectacular effects."
+>
+  <div class="game-container">
+    <div class="game-header">
+      <a class="back-btn" href="/tools" aria-label="Back to tools">← Tools</a>
+      <div class="game-info">
+        <div>
+          <h1>Tornado Sandbox</h1>
+          <div class="stats" role="status" aria-live="polite">
+            <span class="stat">Destroyed: <span id="destroyed">0</span></span>
+            <span class="stat">Time: <span id="timer">0:00</span></span>
+          </div>
+        </div>
+        <div class="controls-info">
+          <span>WASD: Move Tornado &nbsp;•&nbsp; Drag Mouse: Orbit Camera &nbsp;•&nbsp; Scroll: Zoom</span>
+        </div>
+      </div>
+    </div>
+    <div class="canvas-wrapper">
+      <canvas id="gameCanvas"></canvas>
+    </div>
+    <div class="game-tips">
+      <p>🌪️ Drive the tornado across the landscape and watch everything crumble &nbsp;•&nbsp; Pure destruction, no goals</p>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  * { box-sizing: border-box; }
+
+  .game-container {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  .game-header {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(100, 116, 139, 0.3);
+  }
+
+  .game-header .back-btn { align-self: flex-start; }
+
+  .game-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .game-info h1 {
+    margin: 0;
+    font-size: 28px;
+    background: linear-gradient(135deg, #60c0ff, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .stats { display: flex; gap: 16px; margin-top: 6px; font-size: 14px; }
+  .stat { color: #94a3b8; }
+  .stat span { color: #ff6b6b; font-weight: bold; }
+
+  .controls-info {
+    font-size: 12px;
+    color: #64748b;
+    text-align: right;
+  }
+
+  .back-btn {
+    padding: 8px 16px;
+    background: transparent;
+    color: rgba(255,255,255,0.72);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: color 0.2s;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .back-btn:hover { color: rgba(255,255,255,0.92); }
+
+  .canvas-wrapper {
+    width: 100%;
+    max-width: 1200px;
+    border: 2px solid #1e293b;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,0.9);
+    background: #0a0a12;
+    aspect-ratio: 16 / 9;
+  }
+
+  #gameCanvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+
+  .game-tips {
+    margin-top: 16px;
+    max-width: 1200px;
+    text-align: center;
+  }
+  .game-tips p { margin: 0; font-size: 13px; color: #64748b; }
+
+  @media (max-width: 768px) {
+    .game-info h1 { font-size: 22px; }
+  }
+</style>
+
+<script>
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+  s.onload = boot;
+  s.onerror = ()=>{ console.error('Failed to load Three.js'); };
+  document.head.appendChild(s);
+
+  // ── Constants ──────────────────────────────────────────────────────────────
+  const TORNADO_HEIGHT      = 60;
+  const TORNADO_BASE_RADIUS = 20;
+  const TORNADO_TIP_RADIUS  = 0.8;
+  const DESTROY_RADIUS      = 14;  // radius at which objects get destroyed
+  const PARTICLE_COUNT      = 1000;
+  const DUST_COUNT          = 150;
+  const RAIN_COUNT          = 700;
+  const DEBRIS_COUNT        = 25;
+  const BUILDING_COUNT      = 35;  // number of destructible buildings
+  const MOVE_SPEED   = 0.22; // fast tornado movement
+  const DAMP         = 0.88;
+
+  // ── Global state ──────────────────────────────────────────────────────────
+  let THREE,scene,camera,renderer,tornadoMesh;
+  let tornadoGroup,tornadoParticles,dustParticles,tornadoLight,tornadoRings;
+  let rainPoints;
+  let particleAngles,particleHeights,particleRadFrac;
+  let dustAngles;
+  let buildings=[],activeBuildings=[];
+  let debrisMeshes=[],debrisData=[];
+  let screenShake={active:false,intensity:0,duration:0};
+  let tornadoPos;
+  let tornadoVel;
+  let keys={};
+  let camYaw=Math.PI,camPitch=0.35,camDist=16;
+  let isDragging=false,lastMX=0,lastMY=0;
+  let gameStartTime=Date.now();
+  let destructionCount=0;
+  let lightningTimer=60;
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  function boot(){
+    console.log('🎮 Tornado Sandbox boot()');
+    THREE=window.THREE;
+    if(!THREE){
+      console.error('THREE not loaded!');
+      return;
+    }
+    const canvas=document.getElementById('gameCanvas');
+    if(!canvas){
+      console.error('Canvas not found!');
+      return;
+    }
+    const wrapper=canvas.parentElement;
+    console.log('Canvas:', canvas, 'Wrapper:', wrapper);
+
+    scene=new THREE.Scene();
+    scene.background=new THREE.Color(0x0c0d18);
+    scene.fog=new THREE.FogExp2(0x0c0d18,0.013);
+
+    renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.shadowMap.enabled=true;
+    renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    renderer.toneMapping=THREE.ReinhardToneMapping;
+    renderer.toneMappingExposure=1.25;
+    sizeRenderer();
+
+    camera=new THREE.PerspectiveCamera(65,wrapper.clientWidth/wrapper.clientHeight,0.1,1500);
+    camera.position.set(35, 30, 35);
+    camera.lookAt(0,8,0);
+
+    // Lights – stronger for visibility
+    scene.add(new THREE.AmbientLight(0x3a4a6a,3.0));
+    const sun=new THREE.DirectionalLight(0x7788bb,1.3);
+    sun.position.set(-40,90,-30);
+    sun.castShadow=true;
+    sun.shadow.mapSize.set(2048,2048);
+    sun.shadow.camera.near=1;sun.shadow.camera.far=300;
+    sun.shadow.camera.left=-120;sun.shadow.camera.right=120;
+    sun.shadow.camera.top=120;sun.shadow.camera.bottom=-120;
+    scene.add(sun);
+
+    tornadoLight=new THREE.PointLight(0x88aaff,5,80);
+    scene.add(tornadoLight);
+    scene.add(new THREE.PointLight(0x445577,3,200));
+
+    // Ground
+    const gc=document.createElement('canvas');
+    gc.width=512;gc.height=512;
+    const gx=gc.getContext('2d');
+    gx.fillStyle='#0f1810';
+    gx.fillRect(0,0,512,512);
+    gx.strokeStyle='#1a2815';
+    gx.lineWidth=1;
+    for(let i=0;i<=512;i+=32){
+      gx.beginPath();gx.moveTo(i,0);gx.lineTo(i,512);gx.stroke();
+      gx.beginPath();gx.moveTo(0,i);gx.lineTo(512,i);gx.stroke();
+    }
+    const gTex=new THREE.CanvasTexture(gc);
+    gTex.wrapS=gTex.wrapT=THREE.RepeatWrapping;
+    gTex.repeat.set(30,30);
+    const gnd=new THREE.Mesh(
+      new THREE.PlaneGeometry(600,600,1,1),
+      new THREE.MeshStandardMaterial({map:gTex,roughness:1,metalness:0})
+    );
+    gnd.rotation.x=-Math.PI/2;
+    gnd.position.y=-1;
+    gnd.receiveShadow=true;
+    scene.add(gnd);
+
+    // Stars
+    const starPos=new Float32Array(1500*3);
+    for(let i=0;i<1500;i++){
+      const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
+      const r=280+Math.random()*70;
+      starPos[i*3]=r*Math.sin(ph)*Math.cos(th);
+      starPos[i*3+1]=Math.abs(r*Math.cos(ph))+30;
+      starPos[i*3+2]=r*Math.sin(ph)*Math.sin(th);
+    }
+    const sGeo=new THREE.BufferGeometry();
+    sGeo.setAttribute('position',new THREE.BufferAttribute(starPos,3));
+    scene.add(new THREE.Points(sGeo,new THREE.PointsMaterial({color:0xffffff,size:0.8,transparent:true,opacity:0.92})));
+
+    // Rain
+    const rainPos=new Float32Array(RAIN_COUNT*6);
+    for(let i=0;i<RAIN_COUNT;i++){
+      const rx=Math.random()*300-150,ry=Math.random()*60+20,rz=Math.random()*300-150;
+      rainPos[i*6]=rx;rainPos[i*6+1]=ry;rainPos[i*6+2]=rz;
+      rainPos[i*6+3]=rx+0.15;rainPos[i*6+4]=ry-2.2;rainPos[i*6+5]=rz+0.05;
+    }
+    const rainGeo=new THREE.BufferGeometry();
+    rainGeo.setAttribute('position',new THREE.BufferAttribute(rainPos,3));
+    rainPoints=new THREE.LineSegments(rainGeo,new THREE.LineBasicMaterial({color:0x8899bb,transparent:true,opacity:0.35}));
+    scene.add(rainPoints);
+
+    buildTornado();
+    spawnBuildings();
+
+    tornadoPos=new THREE.Vector3(0,0,0);
+    tornadoVel=new THREE.Vector3(0,0,0);
+
+    // Input
+    window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;});
+    window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+    canvas.addEventListener('mousedown',e=>{isDragging=true;lastMX=e.clientX;lastMY=e.clientY;});
+    window.addEventListener('mouseup',()=>isDragging=false);
+    window.addEventListener('mousemove',e=>{
+      if(!isDragging)return;
+      camYaw-=(e.clientX-lastMX)*0.004;
+      camPitch=Math.max(0.08,Math.min(Math.PI/2.2,camPitch+(e.clientY-lastMY)*0.003));
+      lastMX=e.clientX;lastMY=e.clientY;
+    });
+    canvas.addEventListener('wheel',e=>{
+      camDist=Math.max(6,Math.min(35,camDist+e.deltaY*0.04));
+    },{passive:true});
+    window.addEventListener('resize',sizeRenderer);
+
+    console.log('🎮 Boot complete, scene ready');
+    animate();
+  }
+
+  // ── Tornado ───────────────────────────────────────────────────────────────
+  function buildTornado(){
+    tornadoGroup=new THREE.Group();
+    scene.add(tornadoGroup);
+
+    // Funnel shell
+    [
+      [20,14,17,50,0.08,0xaaccee],
+      [14,10,15,35,0.12,0x88aadd],
+      [10,6,14,23,0.17,0x6688cc],
+      [6,3,12,12,0.22,0x5577bb],
+      [3,1.2,9,5,0.30,0x4466aa],
+      [1.2,0.3,6,0,0.45,0x336699],
+    ].forEach(([rt,rb,h,y,op,col])=>{
+      const m=new THREE.Mesh(
+        new THREE.CylinderGeometry(rt,rb,h,36,4,true),
+        new THREE.MeshStandardMaterial({color:col,transparent:true,opacity:op,side:THREE.DoubleSide,roughness:1,depthWrite:false})
+      );
+      m.position.y=y;
+      tornadoGroup.add(m);
+    });
+
+    // Spinning rings
+    tornadoRings=[];
+    const ringDefs=[
+      {h:4,r:1.2,tube:0.35,speed:0.14,col:0x8ab8dd},
+      {h:10,r:2.5,tube:0.4,speed:-0.10,col:0x7aaace},
+      {h:16,r:4,tube:0.45,speed:0.12,col:0x6a99bb},
+      {h:22,r:5.8,tube:0.5,speed:-0.09,col:0x5a88aa},
+      {h:28,r:7.6,tube:0.55,speed:0.08,col:0x4a7799},
+      {h:34,r:10,tube:0.6,speed:-0.07,col:0x3a6688},
+      {h:40,r:12.5,tube:0.65,speed:0.065,col:0x336688},
+      {h:47,r:15.5,tube:0.7,speed:-0.055,col:0x2d5577},
+    ];
+    ringDefs.forEach(rd=>{
+      const mesh=new THREE.Mesh(
+        new THREE.TorusGeometry(rd.r,rd.tube,8,40),
+        new THREE.MeshStandardMaterial({color:rd.col,transparent:true,opacity:0.6,roughness:1,depthWrite:false})
+      );
+      mesh.position.y=rd.h;
+      mesh.rotation.x=Math.PI/2;
+      tornadoGroup.add(mesh);
+      tornadoRings.push({mesh,speed:rd.speed,tiltPhase:Math.random()*Math.PI*2});
+    });
+
+    // Cloud cap
+    const capG=new THREE.SphereGeometry(24,24,14);
+    capG.scale(1,0.3,1);
+    const cap=new THREE.Mesh(capG,new THREE.MeshStandardMaterial({color:0x0a0a1a,transparent:true,opacity:0.94,depthWrite:false}));
+    cap.position.y=56;
+    tornadoGroup.add(cap);
+
+    // Cloud puffs
+    [[-12,56,-10],[16,55,12],[-8,58,15],[12,57,-14],[-18,54,8],[2,60,-18]].forEach(([x,y,z])=>{
+      const pg=new THREE.SphereGeometry(11+Math.random()*6,14,10);
+      pg.scale(1,0.26+Math.random()*0.14,1);
+      const pm=new THREE.Mesh(pg,new THREE.MeshStandardMaterial({color:0x0c0c1c,transparent:true,opacity:0.75+Math.random()*0.18,depthWrite:false}));
+      pm.position.set(x,y,z);
+      tornadoGroup.add(pm);
+    });
+
+    // Inner glow core
+    const coreGeo=new THREE.CylinderGeometry(0,0.8,TORNADO_HEIGHT,16,1,true);
+    const coreMat=new THREE.MeshBasicMaterial({color:0x6699ff,transparent:true,opacity:0.12,side:THREE.DoubleSide,blending:2,depthWrite:false});
+    const core=new THREE.Mesh(coreGeo,coreMat);
+    core.position.y=TORNADO_HEIGHT/2;
+    tornadoGroup.add(core);
+
+    // Spiral particles
+    particleAngles=new Float32Array(PARTICLE_COUNT);
+    particleHeights=new Float32Array(PARTICLE_COUNT);
+    particleRadFrac=new Float32Array(PARTICLE_COUNT);
+    const pp=new Float32Array(PARTICLE_COUNT*3);
+    for(let i=0;i<PARTICLE_COUNT;i++){
+      particleAngles[i]=Math.random()*Math.PI*2;
+      particleHeights[i]=Math.random()*TORNADO_HEIGHT;
+      particleRadFrac[i]=0.25+Math.random()*0.75;
+      setPartPos(pp,i);
+    }
+    const pGeo=new THREE.BufferGeometry();
+    pGeo.setAttribute('position',new THREE.BufferAttribute(pp,3));
+    tornadoParticles=new THREE.Points(pGeo,new THREE.PointsMaterial({color:0xbbddff,size:0.35,transparent:true,opacity:0.75,depthWrite:false,blending:2}));
+    tornadoGroup.add(tornadoParticles);
+
+    // Ground dust
+    dustAngles=new Float32Array(DUST_COUNT);
+    const dp=new Float32Array(DUST_COUNT*3);
+    for(let i=0;i<DUST_COUNT;i++){
+      dustAngles[i]=Math.random()*Math.PI*2;
+      const r=TORNADO_TIP_RADIUS+Math.random()*8;
+      dp[i*3]=Math.cos(dustAngles[i])*r;
+      dp[i*3+1]=Math.random()*2.5;
+      dp[i*3+2]=Math.sin(dustAngles[i])*r;
+    }
+    const dGeo=new THREE.BufferGeometry();
+    dGeo.setAttribute('position',new THREE.BufferAttribute(dp,3));
+    dustParticles=new THREE.Points(dGeo,new THREE.PointsMaterial({color:0xaa9977,size:0.6,transparent:true,opacity:0.85,depthWrite:false}));
+    tornadoGroup.add(dustParticles);
+
+    // Flying debris
+    debrisMeshes=[];debrisData=[];
+    const debMats=[
+      new THREE.MeshStandardMaterial({color:0x6b5a3e,roughness:1}),
+      new THREE.MeshStandardMaterial({color:0x334422,roughness:1}),
+      new THREE.MeshStandardMaterial({color:0x553311,roughness:1}),
+    ];
+    for(let i=0;i<DEBRIS_COUNT;i++){
+      const s=0.18+Math.random()*0.55;
+      const geo=Math.random()>0.5?new THREE.BoxGeometry(s,s*0.6,s*0.4):new THREE.TetrahedronGeometry(s*0.8);
+      const mesh=new THREE.Mesh(geo,debMats[i%3]);
+      scene.add(mesh);
+      debrisMeshes.push(mesh);
+      debrisData.push({
+        angle:Math.random()*Math.PI*2,
+        height:3+Math.random()*TORNADO_HEIGHT*0.6,
+        radFrac:0.5+Math.random()*0.65,
+        speed:(0.035+Math.random()*0.065)*(Math.random()>0.5?1:-1),
+        rx:Math.random()*0.06,ry:Math.random()*0.08,rz:Math.random()*0.05,
+      });
+    }
+  }
+
+  function setPartPos(arr,i){
+    const h=particleHeights[i];
+    const t=h/TORNADO_HEIGHT;
+    const r=THREE.MathUtils.lerp(TORNADO_TIP_RADIUS,TORNADO_BASE_RADIUS,t)*particleRadFrac[i];
+    arr[i*3]=Math.cos(particleAngles[i])*r;
+    arr[i*3+1]=h;
+    arr[i*3+2]=Math.sin(particleAngles[i])*r;
+  }
+
+  // ── Buildings ─────────────────────────────────────────────────────────────
+  function spawnBuildings(){
+    buildings=[];
+    activeBuildings=[];
+    const colors=[0x5a4a3a,0x6a5a4a,0x4a5a6a,0x3a5a6a,0x5a3a7a];
+    for(let i=0;i<BUILDING_COUNT;i++){
+      const x=-150+Math.random()*300;
+      const z=-150+Math.random()*300;
+      const w=2+Math.random()*6;
+      const h=4+Math.random()*12;
+      const d=2+Math.random()*6;
+      const mesh=new THREE.Mesh(
+        new THREE.BoxGeometry(w,h,d),
+        new THREE.MeshStandardMaterial({color:colors[i%colors.length],roughness:0.8,metalness:0.1})
+      );
+      mesh.position.set(x,h/2,z);
+      mesh.castShadow=true;
+      mesh.receiveShadow=true;
+      scene.add(mesh);
+      buildings.push({mesh,x,z,w,h,d,destroyed:false});
+      activeBuildings.push({mesh,x,z,w,h,d,destroyed:false});
+    }
+  }
+
+  // ── Destruction ───────────────────────────────────────────────────────────
+  function checkDestruction(){
+    activeBuildings=activeBuildings.filter(b=>{
+      if(b.destroyed)return false;
+      const dx=b.x-tornadoPos.x;
+      const dz=b.z-tornadoPos.z;
+      const dist=Math.sqrt(dx*dx+dz*dz);
+      if(dist<DESTROY_RADIUS){
+        destroyBuilding(b);
+        return false;
+      }
+      return true;
+    });
+  }
+
+  function destroyBuilding(b){
+    b.destroyed=true;
+    destructionCount++;
+    scene.remove(b.mesh);
+    
+    // Screen shake
+    screenShake.active=true;
+    screenShake.intensity=0.8+Math.random()*0.6;
+    screenShake.duration=8;
+
+    // Particle burst at destruction point
+    const burstPos=new THREE.Vector3(b.x,b.h/2,b.z);
+    for(let i=0;i<40;i++){
+      const px=burstPos.x+(Math.random()-0.5)*2;
+      const py=burstPos.y+(Math.random()-0.5)*b.h;
+      const pz=burstPos.z+(Math.random()-0.5)*2;
+      const s=0.1+Math.random()*0.3;
+      const col=new THREE.Color().setHex(0x8a6a4a+Math.floor(Math.random()*0x222222));
+      const g=new THREE.BoxGeometry(s,s,s);
+      const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:col}));
+      m.position.set(px,py,pz);
+      m.velocity=new THREE.Vector3((Math.random()-0.5)*0.4,(0.3+Math.random()*0.4),(Math.random()-0.5)*0.4);
+      m.lifespan=60+Math.random()*40;
+      scene.add(m);
+      debrisMeshes.push(m);
+      debrisData.push({isExplosion:true});
+    }
+  }
+
+  // ── Update loop ───────────────────────────────────────────────────────────
+  function updateTornado(t){
+    // Movement
+    const mv=new THREE.Vector3();
+    if(keys['w']||keys['arrowup'])mv.z-=1;
+    if(keys['s']||keys['arrowdown'])mv.z+=1;
+    if(keys['a']||keys['arrowleft'])mv.x-=1;
+    if(keys['d']||keys['arrowright'])mv.x+=1;
+    if(mv.lengthSq()>0){
+      mv.normalize().multiplyScalar(MOVE_SPEED);
+      tornadoVel.x+=mv.x;
+      tornadoVel.z+=mv.z;
+    }
+    tornadoVel.x*=DAMP;
+    tornadoVel.z*=DAMP;
+    tornadoPos.add(tornadoVel);
+
+    // Clamp to world bounds
+    const bound=250;
+    tornadoPos.x=Math.max(-bound,Math.min(bound,tornadoPos.x));
+    tornadoPos.z=Math.max(-bound,Math.min(bound,tornadoPos.z));
+
+    tornadoGroup.position.set(tornadoPos.x,-0.3,tornadoPos.z);
+    tornadoLight.position.set(tornadoPos.x,16,tornadoPos.z);
+    tornadoGroup.rotation.y+=0.020;
+
+    // Spin rings
+    tornadoRings.forEach((rd,i)=>{
+      rd.mesh.rotation.z+=rd.speed;
+      rd.mesh.rotation.x=Math.PI/2+Math.sin(t*0.0008+rd.tiltPhase)*0.1;
+    });
+
+    // Spiral particles
+    const pp=tornadoParticles.geometry.attributes.position.array;
+    for(let i=0;i<PARTICLE_COUNT;i++){
+      const spinRate=0.032+(1-particleRadFrac[i])*0.025;
+      particleAngles[i]+=spinRate;
+      particleHeights[i]+=0.12;
+      if(particleHeights[i]>TORNADO_HEIGHT){
+        particleHeights[i]=Math.random()*2;
+        particleAngles[i]=Math.random()*Math.PI*2;
+        particleRadFrac[i]=0.25+Math.random()*0.75;
+      }
+      setPartPos(pp,i);
+    }
+    tornadoParticles.geometry.attributes.position.needsUpdate=true;
+
+    // Dust at base
+    const dp=dustParticles.geometry.attributes.position.array;
+    for(let i=0;i<DUST_COUNT;i++){
+      dustAngles[i]+=0.055;
+      const r=TORNADO_TIP_RADIUS+(i%8)*0.95;
+      dp[i*3]=Math.cos(dustAngles[i])*r;
+      dp[i*3+1]=0.05+Math.sin(i+t*0.0045)*0.6;
+      dp[i*3+2]=Math.sin(dustAngles[i])*r;
+    }
+    dustParticles.geometry.attributes.position.needsUpdate=true;
+
+    // Flying debris
+    for(let i=0;i<debrisMeshes.length;i++){
+      if(!debrisData[i].isExplosion){
+        const d=debrisData[i];
+        d.angle+=d.speed;
+        const hT=d.height/TORNADO_HEIGHT;
+        const r=THREE.MathUtils.lerp(TORNADO_TIP_RADIUS*1.8,TORNADO_BASE_RADIUS*1.2,hT)*d.radFrac;
+        debrisMeshes[i].position.set(
+          Math.cos(d.angle)*r+tornadoPos.x,
+          d.height-0.3,
+          Math.sin(d.angle)*r+tornadoPos.z
+        );
+        debrisMeshes[i].rotation.x+=d.rx;
+        debrisMeshes[i].rotation.y+=d.ry;
+        debrisMeshes[i].rotation.z+=d.rz;
+      } else {
+        // Explosion particle
+        const m=debrisMeshes[i];
+        if(m.velocity){
+          m.position.add(m.velocity);
+          m.velocity.y-=0.008;
+          m.lifespan--;
+          if(m.lifespan<=0){
+            scene.remove(m);
+            debrisMeshes.splice(i,1);
+            debrisData.splice(i,1);
+          } else {
+            m.material.opacity=Math.max(0,m.lifespan/100)*0.8;
+          }
+        }
+      }
+    }
+
+    // Rain
+    const rp=rainPoints.geometry.attributes.position.array;
+    for(let i=0;i<RAIN_COUNT;i++){
+      rp[i*6+1]-=0.7;
+      rp[i*6+4]-=0.7;
+      if(rp[i*6+1]<-2){
+        const nx=(Math.random()-0.5)*300;
+        const nz=(Math.random()-0.5)*300;
+        const ny=60+Math.random()*25;
+        rp[i*6]=nx;rp[i*6+1]=ny;rp[i*6+2]=nz;
+        rp[i*6+3]=nx+0.15;rp[i*6+4]=ny-2.2;rp[i*6+5]=nz+0.05;
+      }
+    }
+    rainPoints.geometry.attributes.position.needsUpdate=true;
+
+    // Lightning
+    lightningTimer--;
+    if(lightningTimer<=0){
+      tornadoLight.intensity=9+Math.random()*10;
+      tornadoLight.color.setHex(Math.random()>0.4?0xaabbff:0xffffff);
+      lightningTimer=18+Math.floor(Math.random()*65);
+    } else {
+      tornadoLight.intensity=Math.max(3.5,tornadoLight.intensity*0.89);
+    }
+
+    checkDestruction();
+  }
+
+  function updateCamera(){
+    const cx=tornadoPos.x+Math.sin(camYaw)*camDist*Math.cos(camPitch);
+    const cy=tornadoPos.y+5+Math.sin(camPitch)*camDist;
+    const cz=tornadoPos.z+Math.cos(camYaw)*camDist*Math.cos(camPitch);
+    camera.position.set(cx,cy,cz);
+    camera.lookAt(tornadoPos.x,tornadoPos.y+3,tornadoPos.z);
+  }
+
+  // Screen shake effect
+  function applyScreenShake(){
+    if(!screenShake.active)return;
+    screenShake.duration--;
+    if(screenShake.duration<=0){
+      screenShake.active=false;
+      return;
+    }
+    const shake=(screenShake.duration/8)*screenShake.intensity;
+    camera.position.x+=(Math.random()-0.5)*shake;
+    camera.position.y+=(Math.random()-0.5)*shake;
+    camera.position.z+=(Math.random()-0.5)*shake;
+  }
+
+  function updateUI(){
+    const dEl=document.getElementById('destroyed');
+    const tEl=document.getElementById('timer');
+    if(dEl)dEl.textContent=String(destructionCount);
+    if(tEl){
+      const s=Math.floor((Date.now()-gameStartTime)/1000);
+      tEl.textContent=Math.floor(s/60)+':'+(s%60+'').padStart(2,'0');
+    }
+  }
+
+  function sizeRenderer(){
+    const canvas=document.getElementById('gameCanvas');
+    const wrapper=canvas.parentElement;
+    const w=wrapper.clientWidth,h=wrapper.clientHeight;
+    if(w===0||h===0)return;
+    renderer&&renderer.setSize(w,h,false);
+    if(camera){camera.aspect=w/h;camera.updateProjectionMatrix();}
+  }
+
+  function animate(t=0){
+    requestAnimationFrame(animate);
+    if(!THREE||!renderer){
+      console.warn('Missing THREE or renderer');
+      return;
+    }
+    try{
+      updateTornado(t);
+      updateCamera();
+      applyScreenShake();
+      updateUI();
+      renderer.render(scene,camera);
+    } catch(e){
+      console.error('Animation error:', e);
+    }
+  }
+</script>
