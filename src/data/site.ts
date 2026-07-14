@@ -23,14 +23,14 @@ export const tools: Tool[] = [
   },
   {
     name: "Tornado Sandbox",
-    desc: "Interactive destruction sandbox with tornado movement, camera controls, environmental effects, and destructible scenery.",
+    desc: "Interactive destruction sandbox with tornado movement, camera controls, environmental effects, and destructible scenery. Requires keyboard and mouse.",
     href: "/tools/tornado-3d",
     status: "Live",
     tag: "Game",
   },
   {
     name: "The Devourer",
-    desc: "Canvas-based monster evolution game with movement, grabbing, growth, power-ups, abilities, and boss encounters.",
+    desc: "Canvas-based monster evolution game with movement, grabbing, growth, power-ups, abilities, and boss encounters. Desktop recommended; basic touch controls are available.",
     href: "/tools/monster-game",
     status: "Live",
     tag: "Game",

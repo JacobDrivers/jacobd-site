@@ -22,7 +22,7 @@ export const projects: Project[] = [
   {
     name: "Tornado Sandbox",
     summary:
-      "An interactive destruction sandbox focused on movement, camera control, environmental effects, and immediate visual feedback.",
+      "An interactive destruction sandbox focused on movement, camera control, environmental effects, and immediate visual feedback. Requires keyboard and mouse.",
     href: "/tools/tornado-3d",
     type: "Interactive experiment",
     status: "Live",
@@ -32,7 +32,7 @@ export const projects: Project[] = [
   {
     name: "The Devourer",
     summary:
-      "A canvas-based monster evolution game with movement, grabbing, growth, power-ups, abilities, and boss encounters.",
+      "A canvas-based monster evolution game with movement, grabbing, growth, power-ups, abilities, and boss encounters. Desktop recommended; basic touch controls are available.",
     href: "/tools/monster-game",
     type: "Game experiment",
     status: "Live",

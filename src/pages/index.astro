@@ -81,7 +81,6 @@ const liveTools = tools.slice(0, 3);
       <p>{profile.about[0]}</p>
       <p>{profile.about[1]}</p>
       <a class="text-link" href="/about">More about me <span aria-hidden="true">→</span></a>
-      <SocialLinks />
     </div>
   </section>
 </Layout>
@@ -173,7 +172,7 @@ const liveTools = tools.slice(0, 3);
   .home-about__eyebrow { margin: 0 0 12px; color: var(--blue); font-family: var(--font-mono); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; }
   .home-about h2 { margin: 0; max-width: 14ch; font-size: clamp(30px, 5vw, 52px); line-height: 1.08; letter-spacing: -0.045em; }
   .home-about > div:last-child > p { margin: 0 0 16px; color: var(--muted); font-size: 16px; line-height: 1.8; }
-  .text-link { display: inline-block; margin: 8px 0 28px; color: var(--accent-soft); font-size: 13px; font-weight: 750; }
+  .text-link { display: inline-block; margin-top: 8px; color: var(--accent-soft); font-size: 13px; font-weight: 750; }
 
   @media (max-width: 860px) {
     .home-hero { min-height: auto; grid-template-columns: 1fr; padding-bottom: 56px; }

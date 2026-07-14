@@ -9,12 +9,9 @@ const isActive = (href: string) => href === '/'
 
 <header class="site-header">
   <div class="site-header__inner">
-    <a class="site-brand" href="/" aria-label="Jacob Drury home">
+    <a class="site-brand" href="/" aria-label="Jacob Drury — Home">
       <span class="site-brand__mark" aria-hidden="true">JD</span>
-      <span class="site-brand__text">
-        <strong>Jacob Drury</strong>
-        <small>Tools · Projects · Experiments</small>
-      </span>
+      <strong class="site-brand__text">Jacob Drury</strong>
     </a>
 
     <nav class="desktop-nav" aria-label="Primary navigation">
@@ -87,19 +84,12 @@ const isActive = (href: string) => href === '/'
   }
 
   .site-brand__text {
-    display: grid;
-    gap: 2px;
+    display: block;
   }
 
   .site-brand strong {
     font-size: 15px;
     letter-spacing: -0.01em;
-  }
-
-  .site-brand small {
-    color: var(--faint);
-    font-size: 11px;
-    letter-spacing: 0.02em;
   }
 
   .desktop-nav {
@@ -185,10 +175,7 @@ const isActive = (href: string) => href === '/'
   @media (max-width: 760px) {
     .desktop-nav { display: none; }
     .mobile-nav { display: block; }
+    .site-brand__text { display: none; }
     .site-header__inner { min-height: 68px; }
-  }
-
-  @media (max-width: 420px) {
-    .site-brand small { display: none; }
   }
 </style>

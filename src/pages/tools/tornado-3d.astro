@@ -4,7 +4,7 @@ import Layout from '../../layouts/Layout.astro';
 
 <Layout 
   title="Tornado Sandbox | Jacob Drury" 
-  description="Control a massive tornado and destroy everything in your path. Pure destruction sandbox with spectacular effects."
+  description="Interactive tornado destruction sandbox requiring keyboard and mouse controls."
   chrome={false}
 >
   <div class="game-container">
@@ -19,7 +19,7 @@ import Layout from '../../layouts/Layout.astro';
           </div>
         </div>
         <div class="controls-info">
-          <span class="desktop-controls">WASD: Move Tornado &nbsp;•&nbsp; Drag Mouse: Orbit Camera &nbsp;•&nbsp; Scroll: Zoom</span>
+          <span class="desktop-controls">Keyboard + mouse required &nbsp;•&nbsp; WASD: Move &nbsp;•&nbsp; Drag: Orbit &nbsp;•&nbsp; Scroll: Zoom</span>
           <span class="touch-controls">Keyboard and mouse required. Touch controls are not currently available.</span>
         </div>
       </div>
@@ -131,7 +131,7 @@ import Layout from '../../layouts/Layout.astro';
     .game-info h1 { font-size: 22px; }
   }
 
-  @media (hover: none) and (pointer: coarse) {
+  @media (max-width: 768px), (hover: none) and (pointer: coarse) {
     .desktop-controls { display: none; }
     .touch-controls { display: inline; color: #94a3b8; }
   }
