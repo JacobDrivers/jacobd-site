@@ -1,91 +1,101 @@
-﻿# Jacob's Site
+# Jacob Drury Tools + Projects Hub
 
-Personal website and small toolkit collection. Built with Astro and React, the site hosts interactive utilities (notably the CoinScout tool), projects, and a simple profile.
+An Astro-based hub for useful tools, projects, games, and experiments. This repository powers [jacobd-site.pages.dev](https://jacobd-site.pages.dev).
 
+This is not the complete `jacobd.us` personal site. `jacobd.us` currently points to a separate minimal Google Sites page; any future domain or subdomain integration remains undecided.
 
-[![Site](https://img.shields.io/badge/site-live-brightgreen)](https://jacobd-site.pages.dev) [![Astro](https://img.shields.io/badge/built%20with-Astro-ff5e00)](https://astro.build) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+## What is here
 
-**[View live site →](https://jacobd-site.pages.dev)**
+- **Coin & Currency Scout** — deployment-generated metals prices, melt calculators, coin and paper-currency references, local inventory tracking, and auction calculations.
+- **Tornado Sandbox** — an interactive 3D destruction experiment.
+- **The Devourer** — a canvas-based monster evolution game.
+- **Hub pages** — a focused home page, tools directory, brief About section, and custom 404 page.
 
-![screenshot](public/screenshot.png?v=2)
+## Routes
 
-**CoinScout tool preview**
+| Route | Purpose |
+| --- | --- |
+| `/` | Tools, projects, experiments, and brief About content |
+| `/tools/` | Directory of live tools and games |
+| `/tools/coin-scout/` | Coin & Currency Scout |
+| `/tools/tornado-3d/` | Tornado Sandbox |
+| `/tools/monster-game/` | The Devourer |
+| `/api/metals.json` | Static metals-price snapshot generated during the build |
 
-![CoinScout tool screenshot](public/CoinScout-Screenshot-v2.png)
+## Stack and deployment
 
-**Table of contents**
+- [Astro](https://astro.build) for static pages and routing
+- React for Coin Scout's interactive interface
+- Tailwind CSS for utility styling
+- Playwright for local screenshot utilities
+- GitHub repository: `JacobDrivers/jacobd-site`
+- Production branch: `master`
+- Cloudflare Pages build command: `npm run build`
+- Cloudflare Pages output directory: `dist`
 
-- [About](#about)
-- [Live demo](#live-demo)
-- [Features](#features)
-- [Quick start](#quick-start)
-- [Project structure](#project-structure)
-- [Tech stack](#tech-stack)
-- [Contributing](#contributing)
-- [License & contact](#license--contact)
+Cloudflare Pages automatically builds and deploys the repository after changes are pushed to the production branch.
 
-## About
+## Local development
 
-This repository contains the source for my personal site. It includes small web tools (see `CoinScout`), a projects list, and personal notes. The site is deployed to GitHub Pages and serves static assets from `public/`.
-
-## Live demo
-
-View the live site: https://jacobd-site.pages.dev
-
-## Features
-
-- **CoinScout**: Interactive coin research tool — lookup coin types, key dates, varieties, and grading guidance.
-- **Tools collection**: Tiny utilities and demos under `src/pages/tools/`.
-- **Fast static site**: Built with Astro for performant static builds and partial hydration via React components.
-
-Example: open the CoinScout tool at `/tools/coin-scout` to search and explore coin details.
-
-## Quick start
-
-Prerequisites: Node.js (16+ recommended) and npm or pnpm.
-
-Install and run locally:
+Use a current Node.js LTS release and npm.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Build for production:
+Astro prints the local development URL after startup.
+
+Create a production build with:
 
 ```bash
 npm run build
+```
+
+Preview the generated `dist` output locally with:
+
+```bash
 npm run preview
 ```
+
+## Metals price snapshot
+
+`src/pages/api/metals.json.js` is intentionally prerendered during `npm run build`. It fetches prices once and writes a static `/api/metals.json` artifact; browsers do not trigger provider requests.
+
+The preferred provider requires this server/build-only environment variable:
+
+```text
+METALS_API_KEY
+```
+
+Cloudflare Pages stores `METALS_API_KEY` as an encrypted production build secret. For local builds, place it in an untracked `.env` file if live Metals.dev data is required:
+
+```text
+METALS_API_KEY=your_key_here
+```
+
+If the key or primary provider is unavailable, the build tries the configured backup provider and finally emits clearly labeled shared fallback values. The generated JSON includes its source, generation timestamp, and the Cloudflare commit SHA when Cloudflare provides one.
+
+Never commit `.env` files or API keys.
 
 ## Project structure
 
 ```text
-/
-├── public/                # static assets (favicons, images, manifest)
-├── src/
-│   ├── assets/
-│   ├── components/        # React components (CoinScout.jsx)
-│   ├── layouts/           # Astro layouts
-│   ├── pages/             # Astro pages and API routes
-│   │   └── tools/         # interactive tools (coin-scout)
-│   └── styles/            # global styles
-└── package.json
+public/                 Static icons, manifest, social image, robots, and sitemap
+scripts/                Local screenshot helpers
+src/components/         Interactive React components
+src/data/               Shared site and metals data
+src/layouts/            Shared Astro document layout and metadata
+src/pages/              Hub pages, tools, games, and build-time JSON route
+src/styles/             Global styles and design tokens
 ```
 
-## Tech stack
+## Useful commands
 
-- Astro — static site generator
-- React — interactive components
-- Tailwind CSS — utility-first styling
-- Lucide React — icons
-
-## Contributing
-
-Suggestions, fixes, or issues are welcome. Please open an issue or a PR with a short description of the change.
-
-If you'd like to run and test locally, follow the Quick start above and check the `tools/` pages.
-
-## License & contact
-
-This project is available under the MIT License. For questions or collaboration, open an issue or contact the repository owner.
+```bash
+npm run dev
+npm run build
+npm run preview
+npm run screenshot
+npm run screenshot:coin-scout
+```

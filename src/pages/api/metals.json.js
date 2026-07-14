@@ -1,314 +1,95 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import { METALS_FALLBACK } from '../../data/metals.js';
 
-// Cache prices for 15 minutes to save API calls and keep pricing reasonably fresh
-let cachedPrices = null;
-let cacheTime = null;
-const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
-const FILE_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
-const FILE_CACHE_DIR = path.join(process.cwd(), '.cache');
-const FILE_CACHE_PATH = path.join(FILE_CACHE_DIR, 'metals-prices.json');
+const REQUEST_TIMEOUT_MS = 8000;
 
-async function readFileCache() {
+async function fetchJson(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   try {
-    const raw = await fs.readFile(FILE_CACHE_PATH, 'utf8');
-    const parsed = JSON.parse(raw);
+    const response = await fetch(url, { signal: controller.signal });
 
-    if (!parsed || !parsed.cachedAt || !parsed.silver || !parsed.gold) {
-      return null;
+    if (!response.ok) {
+      throw new Error(`Provider responded with status ${response.status}`);
     }
 
-    return parsed;
-  } catch (error) {
-    return null;
+    return await response.json();
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
-async function writeFileCache(priceData) {
-  const payload = {
-    ...priceData,
-    cachedAt: Date.now()
-  };
-
-  await fs.mkdir(FILE_CACHE_DIR, { recursive: true });
-  await fs.writeFile(FILE_CACHE_PATH, JSON.stringify(payload), 'utf8');
-
-  return payload;
+function validPrice(value) {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 async function fetchFromMetalsDev(apiKey) {
-  const response = await fetch(
+  const data = await fetchJson(
     `https://api.metals.dev/v1/latest?api_key=${apiKey}&currency=USD&unit=toz`
   );
-  
-  if (!response.ok) {
-    throw new Error(`Metals.dev API responded with status ${response.status}`);
-  }
+  const silver = validPrice(data.metals?.silver ?? data.silver);
+  const gold = validPrice(data.metals?.gold ?? data.gold);
 
-  const data = await response.json();
-  
-  // Check all possible response structures
-  let silver = data.metals?.silver || data.silver || null;
-  let gold = data.metals?.gold || data.gold || null;
-  
   if (!silver || !gold) {
-    throw new Error(`Metals.dev missing prices - Silver: ${silver}, Gold: ${gold}`);
+    throw new Error('Metals.dev response did not contain valid silver and gold prices');
   }
 
-  return {
-    silver: parseFloat(silver),
-    gold: parseFloat(gold),
-    source: 'metals.dev'
-  };
+  return { silver, gold, source: 'metals.dev' };
 }
 
-async function fetchFromCoinGecko() {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-    
-    const response = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=gold,silver&vs_currencies=usd',
-      { signal: controller.signal }
-    );
-    
-    clearTimeout(timeout);
-    
-    if (!response.ok) {
-      throw new Error(`CoinGecko API responded with status ${response.status}`);
-    }
+async function fetchFromMetalsLive() {
+  const data = await fetchJson(
+    'https://api.metals.live/v1/spot/metals?symbols=AU,AG'
+  );
+  const silver = validPrice(data.metals?.AG?.USD ?? data.metals?.AG);
+  const gold = validPrice(data.metals?.AU?.USD ?? data.metals?.AU);
 
-    const data = await response.json();
-    
-    const silver = data.silver?.usd;
-    const gold = data.gold?.usd;
-    
-    // Validate we got valid numbers
-    if (typeof silver !== 'number' || typeof gold !== 'number' || silver <= 0 || gold <= 0) {
-      throw new Error(`CoinGecko returned invalid prices - Silver: ${silver}, Gold: ${gold}`);
-    }
-    
-    return {
-      silver,
-      gold,
-      source: 'coingecko'
-    };
-  } catch (error) {
-    throw new Error(`CoinGecko fetch failed: ${error.message}`);
+  if (!silver || !gold) {
+    throw new Error('Metals.live response did not contain valid silver and gold prices');
   }
+
+  return { silver, gold, source: 'metals.live' };
 }
 
-async function fetchFromOpenMetrics() {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-    
-    // Using metals API with free tier
-    const response = await fetch(
-      'https://api.metals.live/v1/spot/metals?symbols=AU,AG',
-      { signal: controller.signal }
-    );
-    
-    clearTimeout(timeout);
-    
-    if (!response.ok) {
-      throw new Error(`Metals.live API responded with status ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    // metals.live returns prices in different currencies, use USD
-    const silver = data.metals?.AG?.USD || data.metals?.AG || null;
-    const gold = data.metals?.AU?.USD || data.metals?.AU || null;
-    
-    // Validate we got valid numbers
-    if (typeof silver !== 'number' || typeof gold !== 'number' || silver <= 0 || gold <= 0) {
-      throw new Error(`Metals.live returned invalid prices - Silver: ${silver}, Gold: ${gold}`);
-    }
-    
-    return {
-      silver,
-      gold,
-      source: 'metals.live'
-    };
-  } catch (error) {
-    throw new Error(`Metals.live fetch failed: ${error.message}`);
-  }
-}
-
-export async function GET({ url }) {
-  // Check for 'force' query parameter to bypass cache
-  const forceRefresh = url.searchParams.has('force');
-  const fileCache = forceRefresh ? null : await readFileCache();
-
-  // Return cached prices if still fresh (and not force-refreshing)
-  if (!forceRefresh && cachedPrices && cacheTime && Date.now() - cacheTime < CACHE_DURATION) {
-    return new Response(JSON.stringify({
-      ...cachedPrices,
-      cached: true,
-      cacheAge: Math.floor((Date.now() - cacheTime) / 1000),
-      cacheExpires: Math.floor((CACHE_DURATION - (Date.now() - cacheTime)) / 1000)
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'X-Cache': 'HIT'
-      }
-    });
-  }
-
-  // Return file cache if still fresh (and not force-refreshing)
-  if (
-    !forceRefresh &&
-    fileCache &&
-    Date.now() - fileCache.cachedAt < FILE_CACHE_DURATION
-  ) {
-    cachedPrices = {
-      silver: parseFloat(fileCache.silver),
-      gold: parseFloat(fileCache.gold),
-      source: fileCache.source || 'file-cache'
-    };
-    cacheTime = fileCache.cachedAt;
-
-    return new Response(JSON.stringify({
-      ...cachedPrices,
-      cached: true,
-      cacheAge: Math.floor((Date.now() - cacheTime) / 1000),
-      cacheExpires: Math.floor((FILE_CACHE_DURATION - (Date.now() - cacheTime)) / 1000)
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Cache': 'HIT-FILE'
-      }
-    });
-  }
-
+export async function GET() {
+  const generatedAt = new Date().toISOString();
+  const commitSha = import.meta.env.CF_PAGES_COMMIT_SHA;
   const apiKey = import.meta.env.METALS_API_KEY;
   let priceData = null;
-  let error = null;
+  const providerErrors = [];
 
-  // Note: API key configuration is optional - uses fallback if unavailable
-
-  // Try metals.dev first (premium source, limited calls)
   if (apiKey) {
     try {
       priceData = await fetchFromMetalsDev(apiKey);
-      
-      if (!priceData.silver || !priceData.gold) {
-        throw new Error(`Missing prices from metals.dev: ${JSON.stringify(priceData)}`);
-      }
-    } catch (err) {
-      error = err.message;
-      priceData = null;
+    } catch (error) {
+      providerErrors.push(`metals.dev: ${error.message}`);
     }
+  } else {
+    providerErrors.push('metals.dev: METALS_API_KEY was not available at build time');
   }
 
-  // Try CoinGecko as first backup (free, unlimited calls)
   if (!priceData) {
     try {
-      priceData = await fetchFromOpenMetrics();
-      if (!priceData.silver || !priceData.gold) {
-        throw new Error('Missing silver or gold in metals.live response');
-      }
-    } catch (err) {
-      console.error('Metals.live failed:', err.message);
-      error = err.message;
-      priceData = null;
+      priceData = await fetchFromMetalsLive();
+    } catch (error) {
+      providerErrors.push(`metals.live: ${error.message}`);
     }
   }
 
-  // Return cached prices if available (stale but better than nothing)
-  if (!priceData && fileCache) {
-    return new Response(JSON.stringify({
-      silver: parseFloat(fileCache.silver),
-      gold: parseFloat(fileCache.gold),
-      cached: true,
-      stale: true,
-      source: `${fileCache.source || 'file-cache'} [STALE FILE CACHE]`,
-      cacheAge: Math.floor((Date.now() - fileCache.cachedAt) / 1000),
-      error: error
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Cache': 'STALE-FILE'
-      }
-    });
-  }
+  const usingFallback = !priceData;
+  const payload = {
+    ...(priceData ?? { ...METALS_FALLBACK, source: 'fallback' }),
+    generatedAt,
+    ...(commitSha ? { commitSha } : {}),
+    fallback: usingFallback,
+    ...(usingFallback
+      ? { warning: `Provider prices were unavailable during the build. ${providerErrors.join(' | ')}` }
+      : {}),
+  };
 
-  if (!priceData && cachedPrices) {
-    return new Response(JSON.stringify({ 
-      ...cachedPrices, 
-      cached: true,
-      stale: true, 
-      source: `${cachedPrices.source} [STALE CACHE]`,
-      cacheAge: Math.floor((Date.now() - cacheTime) / 1000),
-      error: error
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'X-Cache': 'STALE'
-      }
-    });
-  }
-
-  // Last resort: return hardcoded fallback prices
-  if (!priceData) {
-    // Return reasonable fallback prices (approximate current spot)
-    // These serve as local development defaults
-    return new Response(
-      JSON.stringify({ 
-        silver: 32.50,
-        gold: 2650,
-        source: 'fallback',
-        cached: false,
-        error: error || 'No API key configured and external APIs unavailable',
-        message: 'Using fallback prices. Deploy with METALS_API_KEY for live prices.'
-      }), 
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
-  }
-
-  // Validate we got valid numbers
-  const silver = parseFloat(priceData.silver);
-  const gold = parseFloat(priceData.gold);
-
-  if (isNaN(silver) || isNaN(gold) || silver <= 0 || gold <= 0) {
-    return new Response(
-      JSON.stringify({ 
-        silver: 31.5,
-        gold: 2750,
-        source: 'fallback',
-        cached: false,
-        error: 'Invalid price values received'
-      }), 
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
-  }
-
-  // Cache successful response
-  cachedPrices = priceData;
-  cacheTime = Date.now();
-  await writeFileCache(priceData);
-
-  return new Response(JSON.stringify({
-    ...priceData,
-    cached: false,
-    cacheAge: 0,
-    cacheExpires: CACHE_DURATION
-  }), {
+  return new Response(JSON.stringify(payload), {
     status: 200,
-    headers: { 
-      'Content-Type': 'application/json',
-      'X-Cache': 'MISS'
-    }
+    headers: { 'Content-Type': 'application/json' },
   });
 }

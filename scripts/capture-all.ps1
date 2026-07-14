@@ -3,11 +3,11 @@ Write-Host "Starting screenshot capture..." -ForegroundColor Green
 
 # Homepage
 Write-Host "`nCapturing homepage..." -ForegroundColor Cyan
-node scripts/capture-screenshot.mjs http://localhost:4321/ public/screenshot.png
+node scripts/capture.mjs http://localhost:4321/ public/screenshot.png
 
 # Tools page
 Write-Host "`nCapturing tools page..." -ForegroundColor Cyan
-node scripts/capture-screenshot.mjs http://localhost:4321/tools public/screenshot-tools.png
+node scripts/capture.mjs http://localhost:4321/tools public/screenshot-tools.png
 
 # Coin Scout
 Write-Host "`nCapturing Coin Scout..." -ForegroundColor Cyan

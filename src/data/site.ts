@@ -45,8 +45,8 @@ export const links = [
 
 export const siteInfo = {
   title: "Jacob Drury | Tools + Projects",
-  description: "Personal site for small, useful tools and projects. Fast, shareable, and practical.",
+  description: "A hub for useful tools, projects, and experiments. Fast, practical, and built to be shared.",
   author: "Jacob Drury",
-  url: "https://jacobdrury.com", // Update with your actual domain
-  ogImage: "/og-image.png", // You'll need to create this
+  url: "https://jacobd-site.pages.dev",
+  ogImage: "/og-image.png",
 };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, RefreshCw, Plus, DollarSign, AlertTriangle, Check, X, ChevronRight } from 'lucide-react';
+import { METALS_FALLBACK } from '../data/metals.js';
 
 // Coin type data with key info
 const COIN_TYPES = [
@@ -147,15 +148,19 @@ const CURRENCY_TYPES = [
 ];
 
 export default function CoinScout() {
-  const [spotPrices, setSpotPrices] = useState({ silver: 31.5, gold: 2750, updated: null });
+  const [spotPrices, setSpotPrices] = useState({
+    ...METALS_FALLBACK,
+    source: 'fallback',
+    generatedAt: null,
+    fallback: true,
+    warning: null,
+  });
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState('dashboard');
   const [selectedCoin, setSelectedCoin] = useState(null);
   const [selectedCurrency, setSelectedCurrency] = useState(null);
   const [inventory, setInventory] = useState([]);
   const [flipped, setFlipped] = useState({});
-  const LOCAL_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-
   // Load inventory from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('coinInventory');
@@ -170,81 +175,73 @@ export default function CoinScout() {
   }, [inventory]);
 
   // Fetch spot prices via API route
-  const fetchSpotPrices = async (forceRefresh = false) => {
+  const fetchSpotPrices = async () => {
     setLoading(true);
     try {
-      const url = forceRefresh ? '/api/metals.json?force=1' : '/api/metals.json';
-      const response = await fetch(url);
+      const response = await fetch('/api/metals.json');
+
+      if (!response.ok) {
+        throw new Error(`Price snapshot request failed with status ${response.status}`);
+      }
+
       const data = await response.json();
       
       const silver = parseFloat(data.silver);
       const gold = parseFloat(data.gold);
       
       if (!isNaN(silver) && !isNaN(gold) && silver > 0 && gold > 0) {
-        let statusLabel = '';
-        
-        if (data.cached) {
-          if (data.stale) {
-            statusLabel = `[STALE CACHE - ${data.cacheAge}s old]`;
-          } else {
-            const minutesOld = Math.floor(data.cacheAge / 60);
-            const secondsOld = data.cacheAge % 60;
-            statusLabel = `[CACHED ${minutesOld}m ${secondsOld}s ago]`;
-          }
-        }
-        
-        const source = data.source ? ` (${data.source})` : '';
-        const errorIndicator = data.error ? ` - Warning: ${data.error}` : '';
-        
         const priceData = {
           silver,
           gold,
-          updated: new Date().toLocaleTimeString() + source + statusLabel + errorIndicator,
-          cachedAt: Date.now()
+          source: data.source || 'unknown',
+          generatedAt: data.generatedAt || null,
+          commitSha: data.commitSha || null,
+          fallback: Boolean(data.fallback),
+          warning: data.warning || null,
+          savedAt: Date.now(),
         };
         
         setSpotPrices(priceData);
         
-        // Cache to localStorage as fallback
+        // Keep the most recent deployment snapshot as an offline fallback.
         localStorage.setItem('spotPrices', JSON.stringify(priceData));
       } else {
-        // Try to use localStorage fallback
-        const savedPrices = localStorage.getItem('spotPrices');
-        if (savedPrices) {
-          const fallback = JSON.parse(savedPrices);
-          setSpotPrices({
-            ...fallback,
-            updated: fallback.updated + ' [LOCAL CACHE FALLBACK]'
-          });
-        } else {
-          // Last resort hardcoded defaults
-          setSpotPrices({
-            silver: 32.50,
-            gold: 2650,
-            updated: 'Using fallback prices - API failed and no cached data'
-          });
-        }
+        throw new Error('Price snapshot did not contain valid silver and gold prices');
       }
     } catch (error) {
       console.error('Failed to fetch prices:', error);
-      
-      // Try localStorage fallback
+
       const savedPrices = localStorage.getItem('spotPrices');
       if (savedPrices) {
-        const fallback = JSON.parse(savedPrices);
-        setSpotPrices({
-          ...fallback,
-          updated: fallback.updated + ' [LOCAL CACHE - ERROR]'
-        });
+        try {
+          const fallback = JSON.parse(savedPrices);
+          setSpotPrices({
+            ...fallback,
+            fallback: true,
+            warning: 'Showing the last snapshot saved in this browser because the deployed snapshot could not be loaded.',
+          });
+        } catch (parseError) {
+          console.error('Failed to parse saved prices:', parseError);
+          setSpotPrices({
+            ...METALS_FALLBACK,
+            source: 'fallback',
+            generatedAt: null,
+            fallback: true,
+            warning: 'Showing built-in fallback values because the deployed snapshot could not be loaded.',
+          });
+        }
       } else {
         setSpotPrices({
-          silver: 32.50,
-          gold: 2650,
-          updated: 'Error - see console (using fallback)'
+          ...METALS_FALLBACK,
+          source: 'fallback',
+          generatedAt: null,
+          fallback: true,
+          warning: 'Showing built-in fallback values because the deployed snapshot could not be loaded.',
         });
       }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // Fetch spot prices on component mount
@@ -252,17 +249,12 @@ export default function CoinScout() {
     let isMounted = true;
     
     const loadPrices = async () => {
-      // Check localStorage first for previous prices
+      // Show the saved snapshot immediately, then request the current deployed artifact.
       const savedPrices = localStorage.getItem('spotPrices');
       if (savedPrices && isMounted) {
         try {
           const prices = JSON.parse(savedPrices);
           setSpotPrices(prices);
-
-          const cacheAge = prices.cachedAt ? Date.now() - prices.cachedAt : null;
-          if (cacheAge !== null && cacheAge < LOCAL_CACHE_TTL_MS) {
-            return;
-          }
         } catch (e) {
           console.error('Failed to parse cached prices:', e);
         }
@@ -278,6 +270,13 @@ export default function CoinScout() {
       isMounted = false;
     };
   }, []);
+
+  const formattedGeneratedAt = spotPrices.generatedAt
+    ? new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(new Date(spotPrices.generatedAt))
+    : 'Not available';
 
   // Calculate melt value
   const calculateMelt = (asw, quantity = 1) => {
@@ -325,15 +324,15 @@ export default function CoinScout() {
 
         {/* Header */}
         <header className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 to-amber-600 bg-clip-text text-transparent">
                 Coin & Currency Scout
               </h1>
-              <p className="text-slate-400 mt-1">Live spot prices • Key dates • Melt calculator</p>
+              <p className="text-slate-400 mt-1">Deployment price snapshot • Key dates • Melt calculator</p>
             </div>
-            <div className="text-right">
-              <div className="flex items-center gap-4">
+            <div className="text-left lg:text-right">
+              <div className="flex flex-wrap items-end gap-4 lg:justify-end">
                 <div>
                   <div className="text-xs text-slate-400">Silver</div>
                   <div className="text-2xl font-bold text-slate-200">${spotPrices.silver.toFixed(2)}</div>
@@ -343,23 +342,24 @@ export default function CoinScout() {
                   <div className="text-2xl font-bold text-yellow-400">${spotPrices.gold.toFixed(0)}</div>
                 </div>
                 <button
-                  onClick={() => fetchSpotPrices(false)}
+                  onClick={fetchSpotPrices}
                   disabled={loading}
-                  className="p-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors disabled:opacity-50"
-                  title="Refresh with cache (if fresh)"
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-sm font-medium text-slate-100 transition-colors hover:bg-slate-600 disabled:cursor-wait disabled:opacity-50"
+                  aria-label="Reload the deployed price snapshot"
                 >
                   <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                </button>
-                <button
-                  onClick={() => fetchSpotPrices(true)}
-                  disabled={loading}
-                  className="px-2 py-2 text-xs bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors disabled:opacity-50"
-                  title="Force refresh (bypass cache)"
-                >
-                  Force
+                  {loading ? 'Loading…' : 'Reload snapshot'}
                 </button>
               </div>
-              <div className="text-xs text-slate-500 mt-1">Updated: {spotPrices.updated || 'Click refresh'}</div>
+              <div className="mt-2 max-w-xl text-xs leading-5 text-slate-400" role="status" aria-live="polite">
+                <div>
+                  Generated during the latest site deployment: {formattedGeneratedAt}
+                  {' '}• Source: {spotPrices.source}
+                </div>
+                {spotPrices.warning && (
+                  <div className="mt-1 text-amber-400">{spotPrices.warning}</div>
+                )}
+              </div>
             </div>
           </div>
         </header>

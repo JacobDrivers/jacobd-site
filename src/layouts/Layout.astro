@@ -18,6 +18,7 @@ const {
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site || siteInfo.url);
 const ogImageURL = new URL(ogImage, Astro.site || siteInfo.url);
+const socialImageAlt = 'Jacob Drury tools, projects, and experiments hub';
 ---
 
 <!doctype html>
@@ -41,23 +42,24 @@ const ogImageURL = new URL(ogImage, Astro.site || siteInfo.url);
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
 		<meta property="og:image" content={ogImageURL} />
-		<meta property="og:site_name" content="Jacob Drury" />
+		<meta property="og:image:alt" content={socialImageAlt} />
+		<meta property="og:site_name" content="Jacob Drury Tools + Projects" />
+		<meta property="og:locale" content="en_US" />
 		
 		{/* Twitter */}
-		<meta property="twitter:card" content="summary_large_image" />
-		<meta property="twitter:url" content={canonicalURL} />
-		<meta property="twitter:title" content={title} />
-		<meta property="twitter:description" content={description} />
-		<meta property="twitter:image" content={ogImageURL} />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:url" content={canonicalURL} />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		<meta name="twitter:image" content={ogImageURL} />
+		<meta name="twitter:image:alt" content={socialImageAlt} />
 		
 		{/* Robots */}
 		{noIndex && <meta name="robots" content="noindex, nofollow" />}
 		
 		{/* Favicons */}
 		<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-		<link rel="icon" href="/favicon.ico" />
-		<link rel="icon" href="/favicon.png" type="image/png" />
-		<link rel="shortcut icon" href="/favicon.ico" />
+		<link rel="icon" href="/favicon.ico" sizes="any" />
 		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 		<link rel="manifest" href="/site.webmanifest" />
 	</head>
