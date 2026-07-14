@@ -6,7 +6,7 @@ This is not the complete `jacobd.us` personal site. `jacobd.us` currently points
 
 ## What is here
 
-- **Coin & Currency Scout** — deployment-generated metals prices, melt calculators, coin and paper-currency references, local inventory tracking, and auction calculations.
+- **Coin & Currency Scout** — server-cached metals prices, melt calculators, coin and paper-currency references, local inventory tracking, and auction calculations.
 - **Tornado Sandbox** — an interactive 3D destruction experiment.
 - **The Devourer** — a canvas-based monster evolution game.
 - **Hub pages** — a focused home page, tools directory, brief About section, and custom 404 page.
@@ -20,7 +20,7 @@ This is not the complete `jacobd.us` personal site. `jacobd.us` currently points
 | `/tools/coin-scout/` | Coin & Currency Scout |
 | `/tools/tornado-3d/` | Tornado Sandbox |
 | `/tools/monster-game/` | The Devourer |
-| `/api/metals.json` | Static metals-price snapshot generated during the build |
+| `/api/metals.json` | Cloudflare Pages Function serving a KV-backed metals-price snapshot |
 
 ## Stack and deployment
 
@@ -32,6 +32,7 @@ This is not the complete `jacobd.us` personal site. `jacobd.us` currently points
 - Production branch: `master`
 - Cloudflare Pages build command: `npm run build`
 - Cloudflare Pages output directory: `dist`
+- Cloudflare Pages Function: `functions/api/metals.json.js`
 
 Cloudflare Pages automatically builds and deploys the repository after changes are pushed to the production branch.
 
@@ -58,35 +59,50 @@ Preview the generated `dist` output locally with:
 npm run preview
 ```
 
-## Metals price snapshot
+## Metals price cache
 
-`src/pages/api/metals.json.js` is intentionally prerendered during `npm run build`. It fetches prices once and writes a static `/api/metals.json` artifact; browsers do not trigger provider requests.
+The Astro site remains static. The targeted route `/api/metals.json` is handled by a Cloudflare Pages Function, and `public/_routes.json` prevents Functions from being invoked for unrelated site routes.
 
-The preferred provider requires this server/build-only environment variable:
+The Function keeps the authoritative price snapshot in Workers KV. A normal page load reads that snapshot without contacting a price provider. If the cache is empty, the Function initializes it once. The Coin Scout action requests a refresh check with `?refresh=1`, but the server contacts a provider only when the stored snapshot is at least four hours old.
+
+Provider failures start a 60-minute retry cooldown. Existing KV data is returned before the shared built-in fallback, and snapshots older than 24 hours carry a prominent warning. KV locking reduces duplicate refreshes, although Workers KV is eventually consistent, so approximately 180–186 monthly provider calls is a design target rather than a strict ceiling.
+
+The runtime requires these Cloudflare bindings:
 
 ```text
 METALS_API_KEY
+METALS_CACHE
 ```
 
-Cloudflare Pages stores `METALS_API_KEY` as an encrypted production build secret. For local builds, place it in an untracked `.env` file if live Metals.dev data is required:
+`METALS_API_KEY` is an encrypted runtime secret for the primary Metals.dev provider. `METALS_CACHE` is a Workers KV namespace binding. If the primary provider is unavailable, the Function tries the existing Metals.live backup before returning stale KV data or the shared fallback values.
+
+For local Pages Function development, create an untracked `.dev.vars` file containing the secret:
 
 ```text
 METALS_API_KEY=your_key_here
 ```
 
-If the key or primary provider is unavailable, the build tries the configured backup provider and finally emits clearly labeled shared fallback values. The generated JSON includes its source, generation timestamp, and the Cloudflare commit SHA when Cloudflare provides one.
+Run the built site and Function with Wrangler. This command creates a local KV binding named `METALS_CACHE`; Wrangler uses local KV storage by default:
 
-Never commit `.env` files or API keys.
+```bash
+npm run build
+npx wrangler pages dev dist --kv=METALS_CACHE
+```
+
+The Astro development server alone does not execute the `functions/` directory.
+
+Never commit `.env`, `.dev.vars`, or API key files. Browser `localStorage` is used only to display the last response while the server is unavailable; it is not the authoritative cache.
 
 ## Project structure
 
 ```text
 public/                 Static icons, manifest, social image, robots, and sitemap
+functions/              Cloudflare Pages Functions
 scripts/                Local screenshot helpers
 src/components/         Interactive React components
 src/data/               Shared site and metals data
 src/layouts/            Shared Astro document layout and metadata
-src/pages/              Hub pages, tools, games, and build-time JSON route
+src/pages/              Static hub pages, tools, and games
 src/styles/             Global styles and design tokens
 ```
 

@@ -151,8 +151,13 @@ export default function CoinScout() {
   const [spotPrices, setSpotPrices] = useState({
     ...METALS_FALLBACK,
     source: 'fallback',
-    generatedAt: null,
+    fetchedAt: null,
+    age: null,
+    cached: false,
+    stale: true,
     fallback: true,
+    refreshEligible: false,
+    nextRefreshAllowedAt: null,
     warning: null,
   });
   const [loading, setLoading] = useState(false);
@@ -175,10 +180,12 @@ export default function CoinScout() {
   }, [inventory]);
 
   // Fetch spot prices via API route
-  const fetchSpotPrices = async () => {
+  const fetchSpotPrices = async (refreshRequested = false) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/metals.json');
+      const response = await fetch(refreshRequested
+        ? '/api/metals.json?refresh=1'
+        : '/api/metals.json');
 
       if (!response.ok) {
         throw new Error(`Price snapshot request failed with status ${response.status}`);
@@ -194,17 +201,23 @@ export default function CoinScout() {
           silver,
           gold,
           source: data.source || 'unknown',
-          generatedAt: data.generatedAt || null,
-          commitSha: data.commitSha || null,
+          fetchedAt: data.fetchedAt || null,
+          age: Number.isFinite(data.age) ? data.age : null,
+          cached: Boolean(data.cached),
+          stale: Boolean(data.stale),
           fallback: Boolean(data.fallback),
+          refreshEligible: Boolean(data.refreshEligible),
+          nextRefreshAllowedAt: data.nextRefreshAllowedAt || null,
           warning: data.warning || null,
           savedAt: Date.now(),
         };
         
         setSpotPrices(priceData);
         
-        // Keep the most recent deployment snapshot as an offline fallback.
-        localStorage.setItem('spotPrices', JSON.stringify(priceData));
+        // Keep the most recent server snapshot for temporary offline display only.
+        if (!priceData.fallback) {
+          localStorage.setItem('spotPrices', JSON.stringify(priceData));
+        }
       } else {
         throw new Error('Price snapshot did not contain valid silver and gold prices');
       }
@@ -215,28 +228,47 @@ export default function CoinScout() {
       if (savedPrices) {
         try {
           const fallback = JSON.parse(savedPrices);
+          const fetchedAt = fallback.fetchedAt || fallback.generatedAt || null;
+          const fetchedAtMs = fetchedAt ? Date.parse(fetchedAt) : Number.NaN;
+          const age = Number.isFinite(fetchedAtMs)
+            ? Math.max(0, Math.floor((Date.now() - fetchedAtMs) / 1000))
+            : null;
           setSpotPrices({
             ...fallback,
-            fallback: true,
-            warning: 'Showing the last snapshot saved in this browser because the deployed snapshot could not be loaded.',
+            fetchedAt,
+            age,
+            cached: true,
+            stale: age === null || age >= 4 * 60 * 60,
+            browserFallback: true,
+            warning: 'Showing the last snapshot saved in this browser because the server snapshot could not be loaded.',
           });
         } catch (parseError) {
           console.error('Failed to parse saved prices:', parseError);
           setSpotPrices({
             ...METALS_FALLBACK,
             source: 'fallback',
-            generatedAt: null,
+            fetchedAt: null,
+            age: null,
+            cached: false,
+            stale: true,
             fallback: true,
-            warning: 'Showing built-in fallback values because the deployed snapshot could not be loaded.',
+            refreshEligible: false,
+            nextRefreshAllowedAt: null,
+            warning: 'Showing built-in fallback values because the server snapshot could not be loaded.',
           });
         }
       } else {
         setSpotPrices({
           ...METALS_FALLBACK,
           source: 'fallback',
-          generatedAt: null,
+          fetchedAt: null,
+          age: null,
+          cached: false,
+          stale: true,
           fallback: true,
-          warning: 'Showing built-in fallback values because the deployed snapshot could not be loaded.',
+          refreshEligible: false,
+          nextRefreshAllowedAt: null,
+          warning: 'Showing built-in fallback values because the server snapshot could not be loaded.',
         });
       }
     } finally {
@@ -249,7 +281,7 @@ export default function CoinScout() {
     let isMounted = true;
     
     const loadPrices = async () => {
-      // Show the saved snapshot immediately, then request the current deployed artifact.
+      // Show the saved snapshot immediately, then request the authoritative server snapshot.
       const savedPrices = localStorage.getItem('spotPrices');
       if (savedPrices && isMounted) {
         try {
@@ -260,8 +292,8 @@ export default function CoinScout() {
         }
       }
       
-      // Then fetch fresh prices
-      await fetchSpotPrices();
+      // Then load the current KV-backed snapshot without requesting a provider refresh.
+      await fetchSpotPrices(false);
     };
     
     loadPrices();
@@ -271,12 +303,21 @@ export default function CoinScout() {
     };
   }, []);
 
-  const formattedGeneratedAt = spotPrices.generatedAt
+  const formattedFetchedAt = spotPrices.fetchedAt
     ? new Intl.DateTimeFormat(undefined, {
         dateStyle: 'medium',
         timeStyle: 'short',
-      }).format(new Date(spotPrices.generatedAt))
+      }).format(new Date(spotPrices.fetchedAt))
     : 'Not available';
+  const formattedNextRefreshAt = spotPrices.nextRefreshAllowedAt
+    ? new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(new Date(spotPrices.nextRefreshAllowedAt))
+    : null;
+  const prominentPriceWarning = spotPrices.fallback
+    || spotPrices.age === null
+    || spotPrices.age >= 24 * 60 * 60;
 
   // Calculate melt value
   const calculateMelt = (asw, quantity = 1) => {
@@ -329,7 +370,7 @@ export default function CoinScout() {
               <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 to-amber-600 bg-clip-text text-transparent">
                 Coin & Currency Scout
               </h1>
-              <p className="text-slate-400 mt-1">Deployment price snapshot • Key dates • Melt calculator</p>
+              <p className="text-slate-400 mt-1">Server-cached spot prices • Key dates • Melt calculator</p>
             </div>
             <div className="text-left lg:text-right">
               <div className="flex flex-wrap items-end gap-4 lg:justify-end">
@@ -342,22 +383,35 @@ export default function CoinScout() {
                   <div className="text-2xl font-bold text-yellow-400">${spotPrices.gold.toFixed(0)}</div>
                 </div>
                 <button
-                  onClick={fetchSpotPrices}
-                  disabled={loading}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-sm font-medium text-slate-100 transition-colors hover:bg-slate-600 disabled:cursor-wait disabled:opacity-50"
-                  aria-label="Reload the deployed price snapshot"
+                  onClick={() => fetchSpotPrices(true)}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-sm font-medium text-slate-100 transition-colors hover:bg-slate-600"
+                  aria-label="Check the server for updated metal prices"
+                  aria-busy={loading}
                 >
                   <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                  {loading ? 'Loading…' : 'Reload snapshot'}
+                  {loading ? 'Checking…' : 'Check for updated prices'}
                 </button>
               </div>
               <div className="mt-2 max-w-xl text-xs leading-5 text-slate-400" role="status" aria-live="polite">
                 <div>
-                  Generated during the latest site deployment: {formattedGeneratedAt}
+                  Prices fetched: {formattedFetchedAt}
                   {' '}• Source: {spotPrices.source}
+                  {spotPrices.cached ? ' • KV cache' : ''}
                 </div>
+                {formattedNextRefreshAt && (
+                  <div>
+                    {spotPrices.refreshEligible
+                      ? 'A provider refresh is currently eligible when requested.'
+                      : `Next provider refresh allowed: ${formattedNextRefreshAt}`}
+                  </div>
+                )}
                 {spotPrices.warning && (
-                  <div className="mt-1 text-amber-400">{spotPrices.warning}</div>
+                  <div className={`mt-2 rounded-md border px-3 py-2 ${prominentPriceWarning
+                    ? 'border-red-500/40 bg-red-950/40 text-red-300'
+                    : 'border-amber-500/30 bg-amber-950/30 text-amber-300'
+                  }`}>
+                    {spotPrices.warning}
+                  </div>
                 )}
               </div>
             </div>
