@@ -1,0 +1,35 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageIntro from '../components/PageIntro.astro';
+import SocialLinks from '../components/SocialLinks.astro';
+import { profile } from '../data/profile';
+---
+
+<Layout title="About | Jacob Drury" description="Jacob Drury builds practical tools and interactive experiments.">
+  <PageIntro
+    eyebrow="About"
+    title="About Jacob Drury"
+    description={profile.shortBio}
+  />
+
+  <section class="content-section about-grid">
+    <article class="content-panel prose">
+      {profile.about.map((paragraph) => <p>{paragraph}</p>)}
+    </article>
+
+    <aside class="connect-panel content-panel">
+      <p class="kicker">Connect</p>
+      <h2>Public profiles</h2>
+      <SocialLinks />
+    </aside>
+  </section>
+</Layout>
+
+<style>
+  .about-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(28px, 6vw, 72px); align-items: start; }
+  .prose p { margin: 0 0 20px; color: var(--muted); font-size: 18px; line-height: 1.8; }
+  .prose p:last-child { margin-bottom: 0; }
+  .connect-panel .kicker { margin: 0; color: var(--accent-soft); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; }
+  .connect-panel h2 { margin: 10px 0 22px; font-size: 28px; }
+  @media (max-width: 780px) { .about-grid { grid-template-columns: 1fr; } }
+</style>

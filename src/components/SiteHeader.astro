@@ -1,0 +1,194 @@
+---
+import { navigation } from '../data/site';
+
+const currentPath = Astro.url.pathname;
+const isActive = (href: string) => href === '/'
+  ? currentPath === '/'
+  : currentPath === href || currentPath.startsWith(`${href}/`);
+---
+
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="site-brand" href="/" aria-label="Jacob Drury home">
+      <span class="site-brand__mark" aria-hidden="true">JD</span>
+      <span class="site-brand__text">
+        <strong>Jacob Drury</strong>
+        <small>Tools · Projects · Experiments</small>
+      </span>
+    </a>
+
+    <nav class="desktop-nav" aria-label="Primary navigation">
+      {navigation.map((item) => (
+        <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
+          {item.name}
+        </a>
+      ))}
+    </nav>
+
+    <details class="mobile-nav">
+      <summary aria-label="Open navigation">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span class="sr-only">Menu</span>
+      </summary>
+      <nav aria-label="Mobile navigation">
+        {navigation.map((item) => (
+          <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
+            {item.name}
+          </a>
+        ))}
+      </nav>
+    </details>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    border-bottom: 1px solid var(--stroke);
+    background: rgba(7, 13, 24, 0.84);
+    backdrop-filter: blur(18px);
+  }
+
+  .site-header__inner {
+    width: min(100% - 32px, var(--content-width));
+    min-height: 76px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  .site-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .site-brand__mark {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-radius: 11px;
+    background: linear-gradient(145deg, rgba(245, 158, 11, 0.18), rgba(52, 211, 153, 0.08));
+    color: var(--accent-soft);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+
+  .site-brand__text {
+    display: grid;
+    gap: 2px;
+  }
+
+  .site-brand strong {
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+
+  .site-brand small {
+    color: var(--faint);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+  }
+
+  .desktop-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .desktop-nav a,
+  .mobile-nav nav a {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 650;
+  }
+
+  .desktop-nav a {
+    padding: 9px 12px;
+    border-radius: 9px;
+    transition: color 150ms ease, background 150ms ease;
+  }
+
+  .desktop-nav a:hover,
+  .desktop-nav a[aria-current='page'] {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .desktop-nav a[aria-current='page'] {
+    box-shadow: inset 0 -1px 0 rgba(245, 158, 11, 0.65);
+  }
+
+  .mobile-nav {
+    display: none;
+    position: relative;
+  }
+
+  .mobile-nav summary {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-content: center;
+    gap: 4px;
+    cursor: pointer;
+    list-style: none;
+    border: 1px solid var(--stroke-strong);
+    border-radius: 10px;
+    background: var(--panel);
+  }
+
+  .mobile-nav summary::-webkit-details-marker { display: none; }
+  .mobile-nav summary span:not(.sr-only) {
+    width: 18px;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--text);
+  }
+
+  .mobile-nav nav {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    min-width: 190px;
+    padding: 8px;
+    display: grid;
+    gap: 3px;
+    border: 1px solid var(--stroke-strong);
+    border-radius: 14px;
+    background: #111c2e;
+    box-shadow: var(--shadow);
+  }
+
+  .mobile-nav nav a {
+    padding: 11px 12px;
+    border-radius: 9px;
+  }
+
+  .mobile-nav nav a:hover,
+  .mobile-nav nav a[aria-current='page'] {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  @media (max-width: 760px) {
+    .desktop-nav { display: none; }
+    .mobile-nav { display: block; }
+    .site-header__inner { min-height: 68px; }
+  }
+
+  @media (max-width: 420px) {
+    .site-brand small { display: none; }
+  }
+</style>

@@ -1,0 +1,28 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageIntro from '../components/PageIntro.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import SectionHeading from '../components/SectionHeading.astro';
+import { projects } from '../data/projects';
+---
+
+<Layout title="Projects | Jacob Drury" description="Technical projects and interactive experiments available on Jacob Drury's site.">
+  <PageIntro
+    eyebrow="Projects"
+    title="Projects and experiments"
+    description="Technical projects and interactive experiments available to use on this site."
+  >
+    <div slot="actions">
+      <a class="button button--primary" href="/tools">Browse all tools</a>
+      <a class="button button--quiet" href="https://github.com/JacobDrivers" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+    </div>
+  </PageIntro>
+
+  <section class="content-section">
+    <SectionHeading eyebrow="Available now" title="Explore the projects" description="Each project links to its live route." />
+    <div class="card-grid">
+      {projects.map((project) => <ProjectCard project={project} />)}
+    </div>
+  </section>
+
+</Layout>

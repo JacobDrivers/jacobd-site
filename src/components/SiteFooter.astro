@@ -1,0 +1,43 @@
+---
+import SocialLinks from './SocialLinks.astro';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div>
+      <strong>Jacob Drury</strong>
+      <p>Practical tools, projects, and experiments.</p>
+    </div>
+    <SocialLinks compact={true} />
+    <p class="site-footer__meta">© {year} · Built with Astro</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--stroke);
+    background: rgba(7, 13, 24, 0.62);
+  }
+
+  .site-footer__inner {
+    width: min(100% - 32px, var(--content-width));
+    margin: 0 auto;
+    padding: 34px 0 42px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 22px;
+  }
+
+  strong { font-size: 15px; }
+  p { margin: 5px 0 0; color: var(--faint); font-size: 13px; }
+  .site-footer__meta { grid-column: 1 / -1; margin-top: 0; }
+
+  @media (max-width: 640px) {
+    .site-footer__inner { grid-template-columns: 1fr; }
+    .site-footer__meta { grid-column: auto; }
+  }
+</style>

@@ -1,0 +1,60 @@
+---
+import type { Tool } from '../data/site';
+
+interface Props {
+  tool: Tool;
+}
+
+const { tool } = Astro.props;
+---
+
+<article class:list={['tool-card', { disabled: tool.disabled }]}>
+  <div class="tool-card__meta">
+    <span>{tool.tag}</span>
+    <span class:list={['status', { live: tool.status === 'Live' }]}>{tool.status}</span>
+  </div>
+  <h3>
+    {tool.disabled ? tool.name : <a href={tool.href}>{tool.name}</a>}
+  </h3>
+  <p>{tool.desc}</p>
+  {!tool.disabled && <a class="tool-card__link" href={tool.href}>Open tool <span aria-hidden="true">→</span></a>}
+</article>
+
+<style>
+  .tool-card {
+    min-height: 210px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--stroke-strong);
+    border-radius: var(--radius);
+    background: rgba(17, 28, 46, 0.78);
+    transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+  }
+
+  .tool-card:hover:not(.disabled) {
+    transform: translateY(-2px);
+    background: rgba(24, 38, 61, 0.94);
+    border-color: rgba(52, 211, 153, 0.34);
+  }
+
+  .disabled { opacity: 0.58; }
+
+  .tool-card__meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--faint);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .status { color: var(--faint); }
+  .status.live { color: var(--good); }
+  h3 { margin: 24px 0 0; font-size: 20px; letter-spacing: -0.02em; }
+  h3 a:hover { color: var(--accent-soft); }
+  p { margin: 10px 0 22px; color: var(--muted); font-size: 14px; line-height: 1.65; }
+  .tool-card__link { margin-top: auto; color: var(--good); font-size: 12px; font-weight: 750; }
+</style>

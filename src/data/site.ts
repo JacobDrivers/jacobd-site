@@ -1,4 +1,20 @@
-export const tools = [
+export interface Tool {
+  name: string;
+  desc: string;
+  href: string;
+  status: "Live" | "Soon";
+  tag: string;
+  disabled?: boolean;
+}
+
+export const navigation = [
+  { name: "Home", href: "/" },
+  { name: "About", href: "/about" },
+  { name: "Projects", href: "/projects" },
+  { name: "Tools", href: "/tools" },
+];
+
+export const tools: Tool[] = [
   {
     name: "Coin & Currency Scout",
     desc: "Spot prices, melt calculator, key dates, and inventory. Built for quick decisions at home or at auctions.",
@@ -38,14 +54,16 @@ export const tools = [
   },
 ];
 
-export const links = [
+export const socialLinks = [
   { name: "GitHub", href: "https://github.com/JacobDrivers" },
   { name: "LinkedIn", href: "https://www.linkedin.com/in/jacobadrury/" },
 ];
 
+export const links = socialLinks;
+
 export const siteInfo = {
-  title: "Jacob Drury | Tools + Projects",
-  description: "A hub for useful tools, projects, and experiments. Fast, practical, and built to be shared.",
+  title: "Jacob Drury | Tools, Projects + Experiments",
+  description: "Jacob Drury builds practical tools, interactive projects, and experiments.",
   author: "Jacob Drury",
   url: "https://jacobd-site.pages.dev",
   ogImage: "/og-image.png",

@@ -1,0 +1,52 @@
+---
+import { socialLinks } from '../data/site';
+
+interface Props {
+  compact?: boolean;
+}
+
+const { compact = false } = Astro.props;
+---
+
+<nav class:list={['social-links', { compact }]} aria-label="Social profiles">
+  {socialLinks.map((link) => (
+    <a href={link.href} target="_blank" rel="noreferrer">
+      <span>{link.name}</span>
+      <span aria-hidden="true">↗</span>
+    </a>
+  ))}
+</nav>
+
+<style>
+  .social-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .social-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 9px 12px;
+    border: 1px solid var(--stroke-strong);
+    border-radius: 10px;
+    background: rgba(17, 28, 46, 0.72);
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 650;
+    transition: color 150ms ease, border-color 150ms ease, transform 150ms ease;
+  }
+
+  .social-links a:hover {
+    color: var(--text);
+    border-color: rgba(52, 211, 153, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .compact a {
+    min-height: 36px;
+    padding: 7px 10px;
+  }
+</style>

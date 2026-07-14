@@ -1,0 +1,23 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageIntro from '../components/PageIntro.astro';
+---
+
+<Layout title="Resume | Jacob Drury" description="Resume information is not currently published." noIndex={true}>
+  <div class="resume-page">
+    <PageIntro
+      eyebrow="Resume"
+      title="Resume coming later"
+      description="Resume information is not currently published. In the meantime, explore the projects and tools available on this site."
+    >
+      <div slot="actions">
+        <a class="button button--primary" href="/projects">View projects</a>
+        <a class="button button--quiet" href="/tools">Open tools</a>
+      </div>
+    </PageIntro>
+  </div>
+</Layout>
+
+<style>
+  .resume-page { min-height: min(620px, calc(100vh - 220px)); }
+</style>

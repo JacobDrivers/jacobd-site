@@ -1,12 +1,15 @@
 ---
 import '../styles/global.css';
 import { siteInfo } from '../data/site';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
 
 interface Props {
 	title?: string;
 	description?: string;
 	ogImage?: string;
 	noIndex?: boolean;
+	chrome?: boolean;
 }
 
 const {
@@ -14,11 +17,12 @@ const {
 	description = siteInfo.description,
 	ogImage = siteInfo.ogImage,
 	noIndex = false,
+	chrome = true,
 } = Astro.props;
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site || siteInfo.url);
 const ogImageURL = new URL(ogImage, Astro.site || siteInfo.url);
-const socialImageAlt = 'Jacob Drury tools, projects, and experiments hub';
+const socialImageAlt = 'Jacob Drury — tools, projects, and experiments';
 ---
 
 <!doctype html>
@@ -43,7 +47,7 @@ const socialImageAlt = 'Jacob Drury tools, projects, and experiments hub';
 		<meta property="og:description" content={description} />
 		<meta property="og:image" content={ogImageURL} />
 		<meta property="og:image:alt" content={socialImageAlt} />
-		<meta property="og:site_name" content="Jacob Drury Tools + Projects" />
+		<meta property="og:site_name" content="Jacob Drury" />
 		<meta property="og:locale" content="en_US" />
 		
 		{/* Twitter */}
@@ -64,6 +68,11 @@ const socialImageAlt = 'Jacob Drury tools, projects, and experiments hub';
 		<link rel="manifest" href="/site.webmanifest" />
 	</head>
 	<body>
-		<slot />
+		<a class="skip-link" href="#main-content">Skip to main content</a>
+		{chrome && <SiteHeader />}
+		<main id="main-content" class:list={['site-main', { 'site-main--with-chrome': chrome }]} tabindex="-1">
+			<slot />
+		</main>
+		{chrome && <SiteFooter />}
 	</body>
 </html>
