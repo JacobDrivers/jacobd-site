@@ -4,14 +4,14 @@
  * Generic screenshot capture utility for Astro site
  * Usage: node scripts/capture.mjs <url> <output-file> [options]
  * Examples:
- *   node scripts/capture.mjs http://localhost:4321/ public/screenshot.png
+ *   node scripts/capture.mjs http://localhost:4321/ screenshot.png
  *   node scripts/capture.mjs http://localhost:4321/tools/tornado-3d public/tornado-3d.png --wait=3000
  */
 
 import { chromium } from 'playwright';
 
 const url = process.argv[2] || 'http://localhost:4321/';
-const output = process.argv[3] || 'public/screenshot.png';
+const output = process.argv[3] || 'screenshot.png';
 const args = Object.fromEntries(process.argv.slice(4).map(arg => {
   const [key, value] = arg.replace(/^--/, '').split('=');
   return [key, value || true];

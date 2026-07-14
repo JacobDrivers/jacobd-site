@@ -8,7 +8,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "screenshot": "node scripts/capture.mjs",
-    "screenshot:coin-scout": "node scripts/capture-coin-scout.mjs"
+    "screenshot:readme": "node scripts/capture-readme.mjs"
   },
   "dependencies": {
     "@astrojs/react": "^4.4.2",

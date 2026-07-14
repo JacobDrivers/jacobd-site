@@ -4,6 +4,20 @@ An Astro-based hub for useful tools, projects, games, and experiments. This repo
 
 This is not the complete `jacobd.us` personal site. `jacobd.us` currently points to a separate minimal Google Sites page; any future domain or subdomain integration remains undecided.
 
+## Screenshots
+
+### Hub homepage
+
+[![Jacob Drury tools and projects hub homepage](./docs/screenshots/homepage.png)](https://jacobd-site.pages.dev/)
+
+*The production hub highlighting currently available tools and experiments.*
+
+### Coin & Currency Scout
+
+[![Coin and Currency Scout dashboard with live metals pricing](./docs/screenshots/coin-scout.png)](https://jacobd-site.pages.dev/tools/coin-scout/)
+
+*The Coin Scout dashboard using the deployed KV-backed metals snapshot.*
+
 ## What is here
 
 - **Coin & Currency Scout** — server-cached metals prices, melt calculators, coin and paper-currency references, local inventory tracking, and auction calculations.
@@ -27,7 +41,7 @@ This is not the complete `jacobd.us` personal site. `jacobd.us` currently points
 - [Astro](https://astro.build) for static pages and routing
 - React for Coin Scout's interactive interface
 - Tailwind CSS for utility styling
-- Playwright for local screenshot utilities
+- Playwright for README and one-off browser screenshots
 - GitHub repository: `JacobDrivers/jacobd-site`
 - Production branch: `master`
 - Cloudflare Pages build command: `npm run build`
@@ -97,6 +111,7 @@ Never commit `.env`, `.dev.vars`, or API key files. Browser `localStorage` is us
 
 ```text
 public/                 Static icons, manifest, social image, robots, and sitemap
+docs/screenshots/       Browser-rendered README screenshots
 functions/              Cloudflare Pages Functions
 scripts/                Local screenshot helpers
 src/components/         Interactive React components
@@ -113,5 +128,5 @@ npm run dev
 npm run build
 npm run preview
 npm run screenshot
-npm run screenshot:coin-scout
+npm run screenshot:readme
 ```
