@@ -19,12 +19,15 @@ import Layout from '../../layouts/Layout.astro';
           </div>
         </div>
         <div class="controls-info">
-          <span>WASD: Move Tornado &nbsp;•&nbsp; Drag Mouse: Orbit Camera &nbsp;•&nbsp; Scroll: Zoom</span>
+          <span class="desktop-controls">WASD: Move Tornado &nbsp;•&nbsp; Drag Mouse: Orbit Camera &nbsp;•&nbsp; Scroll: Zoom</span>
+          <span class="touch-controls">Keyboard and mouse required. Touch controls are not currently available.</span>
         </div>
       </div>
     </div>
     <div class="canvas-wrapper">
-      <canvas id="gameCanvas"></canvas>
+      <canvas id="gameCanvas" role="img" aria-label="Interactive Tornado Sandbox game canvas. Move the tornado with a keyboard and control the camera with a mouse.">
+        Tornado Sandbox requires a browser with canvas support and keyboard and mouse controls.
+      </canvas>
     </div>
     <div class="game-tips">
       <p>🌪️ Drive the tornado across the landscape and watch everything crumble &nbsp;•&nbsp; Pure destruction, no goals</p>
@@ -86,6 +89,8 @@ import Layout from '../../layouts/Layout.astro';
     text-align: right;
   }
 
+  .touch-controls { display: none; }
+
   .back-btn {
     padding: 8px 16px;
     background: transparent;
@@ -124,6 +129,11 @@ import Layout from '../../layouts/Layout.astro';
 
   @media (max-width: 768px) {
     .game-info h1 { font-size: 22px; }
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    .desktop-controls { display: none; }
+    .touch-controls { display: inline; color: #94a3b8; }
   }
 </style>
 

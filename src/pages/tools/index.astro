@@ -4,33 +4,19 @@ import PageIntro from '../../components/PageIntro.astro';
 import SectionHeading from '../../components/SectionHeading.astro';
 import ToolCard from '../../components/ToolCard.astro';
 import { tools } from '../../data/site';
-
-const liveTools = tools.filter((tool) => !tool.disabled);
-const upcomingTools = tools.filter((tool) => tool.disabled);
 ---
 
-<Layout title="Tools | Jacob Drury" description="Useful tools, games, and interactive experiments built by Jacob Drury.">
+<Layout title="Tools | Jacob Drury" description="Practical tools, games, and interactive experiments available on Jacob Drury's site.">
   <PageIntro
     eyebrow="Tools hub"
-    title="Useful things, ready to run."
-    description="Practical utilities and interactive experiments. The tools keep their focused interfaces while sharing a clearer home within the personal site."
+    title="Tools and experiments"
+    description="Practical utilities, references, games, and interactive experiments available to use."
   />
 
   <section class="content-section">
-    <SectionHeading eyebrow="Live" title="Available now." description="Every live item opens the existing working route." />
+    <SectionHeading eyebrow="Available now" title="Choose a tool or experiment" description="Coin Scout includes its coin library, inventory, paper currency reference, and auction mode in one workspace." />
     <div class="tool-grid">
-      {liveTools.map((tool) => <ToolCard tool={tool} />)}
-    </div>
-  </section>
-
-  <section class="content-section upcoming">
-    <SectionHeading eyebrow="Planned" title="Ideas in the queue." description="These labels are retained from the existing hub and do not represent release commitments." />
-    <div class="tool-grid">
-      {upcomingTools.map((tool) => <ToolCard tool={tool} />)}
+      {tools.map((tool) => <ToolCard tool={tool} />)}
     </div>
   </section>
 </Layout>
-
-<style>
-  .upcoming { padding-bottom: 86px; }
-</style>

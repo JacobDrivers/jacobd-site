@@ -2,9 +2,8 @@ export interface Tool {
   name: string;
   desc: string;
   href: string;
-  status: "Live" | "Soon";
+  status: "Live";
   tag: string;
-  disabled?: boolean;
 }
 
 export const navigation = [
@@ -17,40 +16,24 @@ export const navigation = [
 export const tools: Tool[] = [
   {
     name: "Coin & Currency Scout",
-    desc: "Spot prices, melt calculator, key dates, and inventory. Built for quick decisions at home or at auctions.",
+    desc: "Coin and paper-currency reference with server-cached metals prices, melt calculations, inventory tracking, and auction tools.",
     href: "/tools/coin-scout",
     status: "Live",
     tag: "Tools",
   },
   {
     name: "Tornado Sandbox",
-    desc: "Control a massive tornado and destroy everything in your path. Pure destruction sandbox with spectacular effects.",
+    desc: "Interactive destruction sandbox with tornado movement, camera controls, environmental effects, and destructible scenery.",
     href: "/tools/tornado-3d",
     status: "Live",
     tag: "Game",
   },
   {
     name: "The Devourer",
-    desc: "A visceral monster evolution game. Consume, grow, and dominate. Features boss battles, power-ups, and abilities.",
+    desc: "Canvas-based monster evolution game with movement, grabbing, growth, power-ups, abilities, and boss encounters.",
     href: "/tools/monster-game",
     status: "Live",
     tag: "Game",
-  },
-  {
-    name: "Coin Library (coming soon)",
-    desc: "Quick reference for types, compositions, key dates, and red flags.",
-    href: "/tools",
-    status: "Soon",
-    tag: "Reference",
-    disabled: true,
-  },
-  {
-    name: "Auction Mode (coming soon)",
-    desc: "Fast entry, totals, targets, and sanity checks while bidding.",
-    href: "/tools",
-    status: "Soon",
-    tag: "Workflow",
-    disabled: true,
   },
 ];
 

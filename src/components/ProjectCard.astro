@@ -14,13 +14,13 @@ const { project } = Astro.props;
     <span class="status"><i aria-hidden="true"></i>{project.status}</span>
   </div>
   <div>
-    <h3><a href={project.href}>{project.name}</a></h3>
+    <h3>{project.name}</h3>
     <p>{project.summary}</p>
   </div>
   <ul aria-label={`${project.name} technologies`}>
     {project.technologies.map((technology) => <li>{technology}</li>)}
   </ul>
-  <a class="project-card__link" href={project.href}>View project <span aria-hidden="true">↗</span></a>
+  <a class="project-card__link" href={project.href} aria-label={`View ${project.name}`}>View project <span aria-hidden="true">↗</span></a>
 </article>
 
 <style>
@@ -58,7 +58,6 @@ const { project } = Astro.props;
   .status i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 12px currentColor; }
 
   h3 { margin: 0; font-size: clamp(22px, 3vw, 29px); letter-spacing: -0.03em; }
-  h3 a:hover { color: var(--accent-soft); }
   p { margin: 12px 0 0; color: var(--muted); line-height: 1.7; }
 
   ul {
@@ -74,7 +73,7 @@ const { project } = Astro.props;
     padding: 6px 9px;
     border: 1px solid var(--stroke);
     border-radius: 999px;
-    color: var(--faint);
+    color: var(--muted);
     font-family: var(--font-mono);
     font-size: 10px;
   }

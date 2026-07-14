@@ -10,7 +10,7 @@ import { projects } from '../data/projects';
 import { tools } from '../data/site';
 
 const featuredProjects = projects.filter((project) => project.featured);
-const liveTools = tools.filter((tool) => !tool.disabled).slice(0, 3);
+const liveTools = tools.slice(0, 3);
 ---
 
 <Layout
@@ -19,9 +19,15 @@ const liveTools = tools.filter((tool) => !tool.disabled).slice(0, 3);
 >
   <section class="home-hero">
     <PageIntro eyebrow={profile.eyebrow} title={profile.headline} description={profile.introduction}>
-      <div slot="actions">
-        <a class="button button--primary" href="/projects">Explore projects <span aria-hidden="true">→</span></a>
-        <a class="button button--quiet" href="/tools">Open tools</a>
+      <div slot="actions" class="hero-actions">
+        <p class="hero-focus">{profile.technicalFocus}</p>
+        <div class="hero-actions__row">
+          <div class="hero-actions__primary">
+            <a class="button button--primary" href="/projects">Explore projects <span aria-hidden="true">→</span></a>
+            <a class="button button--quiet" href="/tools">Open tools</a>
+          </div>
+          <SocialLinks iconOnly={true} />
+        </div>
       </div>
     </PageIntro>
 
@@ -88,6 +94,31 @@ const liveTools = tools.filter((tool) => !tool.disabled).slice(0, 3);
     align-items: center;
     gap: clamp(36px, 7vw, 90px);
   }
+
+  .hero-actions {
+    display: grid;
+    gap: 15px;
+  }
+
+  .hero-focus {
+    margin: 0;
+    color: var(--blue);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 1.7;
+    letter-spacing: 0.045em;
+  }
+
+  .hero-actions__row,
+  .hero-actions__primary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .hero-actions__row { gap: 14px; }
 
   .hero-signal {
     position: relative;

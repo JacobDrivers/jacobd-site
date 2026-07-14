@@ -419,32 +419,38 @@ export default function CoinScout() {
         </header>
 
         {/* Navigation */}
-        <nav className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {[
-            { id: 'dashboard', label: 'Dashboard', icon: DollarSign },
-            { id: 'coins', label: 'Coin Library', icon: Search },
-            { id: 'currency', label: 'Paper Currency', icon: DollarSign },
-            { id: 'inventory', label: 'My Inventory', icon: Plus },
-            { id: 'auction', label: 'Auction Mode', icon: AlertTriangle }
-          ].map(tab => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setView(tab.id)}
-                className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap transition-colors ${
-                  view === tab.id
-                    ? 'bg-amber-600 text-white'
-                    : 'text-slate-300 hover:opacity-80'
-                }`}
-                style={view !== tab.id ? {backgroundColor: '#2a272f'} : {}}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
+        <div className="relative mb-6">
+          <p className="mb-2 text-right text-[10px] font-medium uppercase tracking-wider text-slate-500 md:hidden" aria-hidden="true">
+            Scroll tabs →
+          </p>
+          <nav className="flex gap-2 overflow-x-auto pb-2" aria-label="Coin Scout sections">
+            {[
+              { id: 'dashboard', label: 'Dashboard', icon: DollarSign },
+              { id: 'coins', label: 'Coin Library', icon: Search },
+              { id: 'currency', label: 'Paper Currency', icon: DollarSign },
+              { id: 'inventory', label: 'My Inventory', icon: Plus },
+              { id: 'auction', label: 'Auction Mode', icon: AlertTriangle }
+            ].map(tab => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setView(tab.id)}
+                  aria-pressed={view === tab.id}
+                  className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap transition-colors ${
+                    view === tab.id
+                      ? 'bg-amber-600 text-white'
+                      : 'text-slate-300 hover:opacity-80'
+                  }`}
+                  style={view !== tab.id ? {backgroundColor: '#2a272f'} : {}}
+                >
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
         {/* Dashboard View */}
         {view === 'dashboard' && (

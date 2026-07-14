@@ -20,9 +20,21 @@ import { projects } from '../data/projects';
 
   <section class="content-section">
     <SectionHeading eyebrow="Available now" title="Explore the projects" description="Each project links to its live route." />
-    <div class="card-grid">
+    <div class="card-grid project-grid">
       {projects.map((project) => <ProjectCard project={project} />)}
     </div>
   </section>
 
 </Layout>
+
+<style>
+  .project-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  @media (max-width: 1080px) {
+    .project-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 680px) {
+    .project-grid { grid-template-columns: 1fr; }
+  }
+</style>
