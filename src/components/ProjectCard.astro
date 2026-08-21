@@ -8,7 +8,7 @@ interface Props {
 const { project } = Astro.props;
 ---
 
-<a class="project-card" href={project.href} aria-label={`View ${project.name}`}>
+<a class="project-card" href={`/projects/${project.slug}`} aria-label={`Read about ${project.name}`}>
   <div class="project-card__top">
     <span>{project.type}</span>
     <span class="status"><i aria-hidden="true"></i>{project.status}</span>
@@ -20,7 +20,7 @@ const { project } = Astro.props;
   <ul aria-label={`${project.name} technologies`}>
     {project.technologies.map((technology) => <li>{technology}</li>)}
   </ul>
-  <span class="project-card__link">View project <span aria-hidden="true">↗</span></span>
+  <span class="project-card__link">Read case study <span aria-hidden="true">→</span></span>
 </a>
 
 <style>
