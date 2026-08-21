@@ -144,8 +144,8 @@ textarea:focus-visible {
 }
 
 .skip-link:focus {
-  opacity: 1;
-  pointer-events: auto;
+  opacity: 1 !important;
+  pointer-events: auto !important;
   transform: translateY(0);
 }
 

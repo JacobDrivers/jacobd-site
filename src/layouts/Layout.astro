@@ -85,7 +85,7 @@ const socialImageAlt = 'Jacob Drury — tools, projects, and experiments';
 		<link rel="manifest" href="/site.webmanifest" />
 	</head>
 	<body>
-		<a class="skip-link" href="#main-content">Skip to main content</a>
+		<a class="skip-link" href="#main-content" style="opacity: 0; pointer-events: none;">Skip to main content</a>
 		{chrome && <SiteHeader />}
 		<main id="main-content" class:list={['site-main', { 'site-main--with-chrome': chrome }]} tabindex="-1">
 			<slot />

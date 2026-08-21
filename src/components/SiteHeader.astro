@@ -7,7 +7,7 @@ const isActive = (href: string) => href === '/'
   : currentPath === href || currentPath.startsWith(`${href}/`);
 ---
 
-<header class="site-header">
+<header class="site-header" style="visibility: hidden;">
   <div class="site-header__inner">
     <a class="site-brand" href="/" aria-label="Jacob Drury — Home">
       <span class="site-brand__mark" aria-hidden="true">JD</span>
@@ -42,7 +42,7 @@ const isActive = (href: string) => href === '/'
 
 <style>
   .site-header {
-    visibility: visible;
+    visibility: visible !important;
     position: sticky;
     top: 0;
     z-index: 30;
