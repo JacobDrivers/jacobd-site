@@ -29,6 +29,7 @@ import Layout from '../../layouts/Layout.astro';
         Tornado Sandbox requires a browser with canvas support and keyboard and mouse controls.
       </canvas>
     </div>
+    <p id="gameStatus" class="game-status" role="status" aria-live="polite"></p>
     <div class="game-tips">
       <p>🌪️ Drive the tornado across the landscape and watch everything crumble &nbsp;•&nbsp; Pure destruction, no goals</p>
     </div>
@@ -126,6 +127,8 @@ import Layout from '../../layouts/Layout.astro';
     text-align: center;
   }
   .game-tips p { margin: 0; font-size: 13px; color: #64748b; }
+  .game-status { min-height: 20px; margin: 12px 0 0; color: #fbbf24; font-size: 13px; text-align: center; }
+  .game-status.game-status--error { color: #fca5a5; }
 
   @media (max-width: 768px) {
     .game-info h1 { font-size: 22px; }
@@ -138,10 +141,20 @@ import Layout from '../../layouts/Layout.astro';
 </style>
 
 <script>
+  function setGameStatus(message: string, isError = false){
+    const status=document.getElementById('gameStatus');
+    if(!status)return;
+    status.textContent=message;
+    status.classList.toggle('game-status--error',isError);
+  }
+
   const s = document.createElement('script');
   s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
   s.onload = boot;
-  s.onerror = ()=>{ console.error('Failed to load Three.js'); };
+  s.onerror = ()=>{
+    console.error('Failed to load Three.js');
+    setGameStatus('The 3D engine could not be loaded. Check your connection and reload the page.', true);
+  };
   document.head.appendChild(s);
 
   // ── Constants ──────────────────────────────────────────────────────────────
@@ -158,42 +171,55 @@ import Layout from '../../layouts/Layout.astro';
   const DAMP         = 0.88;
 
   // ── Global state ──────────────────────────────────────────────────────────
-  let THREE,scene,camera,renderer,tornadoMesh;
-  let tornadoGroup,tornadoParticles,dustParticles,tornadoLight,tornadoRings;
-  let rainPoints;
-  let particleAngles,particleHeights,particleRadFrac;
-  let dustAngles;
-  let buildings=[],activeBuildings=[];
-  let debrisMeshes=[],debrisData=[];
+  let THREE: any,scene: any,camera: any,renderer: any,tornadoMesh: any;
+  let tornadoGroup: any,tornadoParticles: any,dustParticles: any,tornadoLight: any,tornadoRings: any[] = [];
+  let rainPoints: any;
+  let particleAngles: any,particleHeights: any,particleRadFrac: any;
+  let dustAngles: any;
+  let buildings: any[] = [],activeBuildings: any[] = [];
+  let debrisMeshes: any[] = [],debrisData: any[] = [];
   let screenShake={active:false,intensity:0,duration:0};
-  let tornadoPos;
-  let tornadoVel;
-  let keys={};
+  let tornadoPos: any;
+  let tornadoVel: any;
+  let keys: Record<string, boolean> = {};
   let camYaw=Math.PI,camPitch=0.35,camDist=16;
   let isDragging=false,lastMX=0,lastMY=0;
   let gameStartTime=Date.now();
   let destructionCount=0;
   let lightningTimer=60;
+  let animationFailed=false;
 
   // ── Boot ──────────────────────────────────────────────────────────────────
   function boot(){
-    THREE=window.THREE;
+    THREE=(window as any).THREE;
     if(!THREE){
       console.error('THREE not loaded!');
+      setGameStatus('The 3D engine could not be loaded. Check your connection and reload the page.', true);
       return;
     }
     const canvas=document.getElementById('gameCanvas');
     if(!canvas){
       console.error('Canvas not found!');
+      setGameStatus('The game canvas could not be initialized.', true);
       return;
     }
     const wrapper=canvas.parentElement;
+    if(!wrapper){
+      setGameStatus('The game container could not be initialized.', true);
+      return;
+    }
 
     scene=new THREE.Scene();
     scene.background=new THREE.Color(0x0c0d18);
     scene.fog=new THREE.FogExp2(0x0c0d18,0.013);
 
-    renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+    try{
+      renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+    } catch(error){
+      console.error('Failed to initialize WebGL:', error);
+      setGameStatus('3D graphics are unavailable in this browser or device.', true);
+      return;
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
     renderer.shadowMap.enabled=true;
     renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -224,6 +250,10 @@ import Layout from '../../layouts/Layout.astro';
     const gc=document.createElement('canvas');
     gc.width=512;gc.height=512;
     const gx=gc.getContext('2d');
+    if(!gx){
+      setGameStatus('The game background could not be initialized.', true);
+      return;
+    }
     gx.fillStyle='#0f1810';
     gx.fillRect(0,0,512,512);
     gx.strokeStyle='#1a2815';
@@ -416,7 +446,7 @@ import Layout from '../../layouts/Layout.astro';
     }
   }
 
-  function setPartPos(arr,i){
+  function setPartPos(arr: Float32Array, i: number){
     const h=particleHeights[i];
     const t=h/TORNADO_HEIGHT;
     const r=THREE.MathUtils.lerp(TORNADO_TIP_RADIUS,TORNADO_BASE_RADIUS,t)*particleRadFrac[i];
@@ -464,7 +494,7 @@ import Layout from '../../layouts/Layout.astro';
     });
   }
 
-  function destroyBuilding(b){
+  function destroyBuilding(b: any){
     b.destroyed=true;
     destructionCount++;
     scene.remove(b.mesh);
@@ -494,7 +524,7 @@ import Layout from '../../layouts/Layout.astro';
   }
 
   // ── Update loop ───────────────────────────────────────────────────────────
-  function updateTornado(t){
+  function updateTornado(t: number){
     // Movement
     const mv=new THREE.Vector3();
     if(keys['w']||keys['arrowup'])mv.z-=1;
@@ -646,19 +676,17 @@ import Layout from '../../layouts/Layout.astro';
 
   function sizeRenderer(){
     const canvas=document.getElementById('gameCanvas');
+    if(!canvas||!renderer)return;
     const wrapper=canvas.parentElement;
+    if(!wrapper)return;
     const w=wrapper.clientWidth,h=wrapper.clientHeight;
     if(w===0||h===0)return;
-    renderer&&renderer.setSize(w,h,false);
+    renderer.setSize(w,h,false);
     if(camera){camera.aspect=w/h;camera.updateProjectionMatrix();}
   }
 
   function animate(t=0){
-    requestAnimationFrame(animate);
-    if(!THREE||!renderer){
-      console.warn('Missing THREE or renderer');
-      return;
-    }
+    if(animationFailed||!THREE||!renderer)return;
     try{
       updateTornado(t);
       updateCamera();
@@ -667,6 +695,10 @@ import Layout from '../../layouts/Layout.astro';
       renderer.render(scene,camera);
     } catch(e){
       console.error('Animation error:', e);
+      animationFailed=true;
+      setGameStatus('The 3D simulation stopped unexpectedly. Reload the page to try again.', true);
+      return;
     }
+    requestAnimationFrame(animate);
   }
 </script>

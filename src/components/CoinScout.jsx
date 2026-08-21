@@ -147,6 +147,11 @@ const CURRENCY_TYPES = [
   }
 ];
 
+function parsePositiveInteger(value) {
+  const parsed = Number.parseInt(String(value), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
 export default function CoinScout() {
   const [spotPrices, setSpotPrices] = useState({
     ...METALS_FALLBACK,
@@ -170,7 +175,14 @@ export default function CoinScout() {
   useEffect(() => {
     const saved = localStorage.getItem('coinInventory');
     if (saved) {
-      setInventory(JSON.parse(saved));
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setInventory(parsed);
+        }
+      } catch (error) {
+        console.error('Failed to parse saved inventory:', error);
+      }
     }
   }, []);
 
@@ -326,18 +338,21 @@ export default function CoinScout() {
 
   // Add to inventory
   const addToInventory = (item) => {
-    setInventory([...inventory, { ...item, id: Date.now() }]);
+    setInventory(previous => [
+      ...previous,
+      { ...item, quantity: parsePositiveInteger(item.quantity), id: Date.now() },
+    ]);
   };
 
   // Delete from inventory
   const deleteFromInventory = (itemId) => {
-    setInventory(inventory.filter(item => item.id !== itemId));
+    setInventory(previous => previous.filter(item => item.id !== itemId));
   };
 
   // Auction mode calculator
   const [auctionCalc, setAuctionCalc] = useState({
     type: null,
-    quantity: 1,
+    quantity: '1',
     premium: 10,
     maxBid: 0
   });
@@ -345,8 +360,9 @@ export default function CoinScout() {
   useEffect(() => {
     if (auctionCalc.type) {
       const coinData = COIN_TYPES.find(c => c.id === auctionCalc.type);
-      if (coinData) {
-        const melt = parseFloat(calculateMelt(coinData.asw, auctionCalc.quantity));
+      const quantity = Number(auctionCalc.quantity) || 0;
+      if (coinData && quantity > 0) {
+        const melt = parseFloat(calculateMelt(coinData.asw, quantity));
         const withPremium = melt * (1 + auctionCalc.premium / 100);
         setAuctionCalc(prev => ({ ...prev, maxBid: withPremium.toFixed(2) }));
       }
@@ -354,7 +370,7 @@ export default function CoinScout() {
   }, [auctionCalc.type, auctionCalc.quantity, auctionCalc.premium, spotPrices]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4" style={{backgroundImage: 'linear-gradient(135deg, #0b1220 0%, #0b1220 100%)'}}>
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4" style={{backgroundImage: 'linear-gradient(135deg, #0b1220 0%, #0b1220 100%)'}}>
       <div className="max-w-6xl mx-auto">
         {/* Top Navigation */}
         <nav className="mb-6 pb-4 border-b border-slate-700/50">
@@ -367,7 +383,7 @@ export default function CoinScout() {
         <header className="mb-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 to-amber-600 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold bg-linear-to-r from-yellow-400 to-amber-600 bg-clip-text text-transparent">
                 Coin & Currency Scout
               </h1>
               <p className="text-slate-400 mt-1">Server-cached spot prices • Key dates • Melt calculator</p>
@@ -549,7 +565,7 @@ export default function CoinScout() {
 
 // Quick Melt Calculator Component
 function QuickMeltCalc({ spotPrices }) {
-  const [calc, setCalc] = useState({ type: 'dime-90', quantity: 1 });
+  const [calc, setCalc] = useState({ type: 'dime-90', quantity: '1' });
   
   const types = {
     'dime-90': { name: '90% Dimes', asw: 0.07234 },
@@ -560,7 +576,8 @@ function QuickMeltCalc({ spotPrices }) {
     'war-nickel': { name: 'War Nickels', asw: 0.05626 }
   };
 
-  const melt = (types[calc.type].asw * spotPrices.silver * calc.quantity).toFixed(2);
+  const quantity = Number(calc.quantity) || 0;
+  const melt = (types[calc.type].asw * spotPrices.silver * quantity).toFixed(2);
 
   return (
     <div className="space-y-4">
@@ -578,7 +595,9 @@ function QuickMeltCalc({ spotPrices }) {
         type="number"
         min="1"
         value={calc.quantity}
-        onChange={e => setCalc({ ...calc, quantity: parseInt(e.target.value) || 1 })}
+        inputMode="numeric"
+        onChange={e => setCalc({ ...calc, quantity: e.target.value })}
+        onBlur={() => setCalc(previous => ({ ...previous, quantity: String(parsePositiveInteger(previous.quantity)) }))}
         className="w-full p-3 bg-slate-700 rounded-lg border border-slate-600 text-white"
         placeholder="Quantity"
       />
@@ -587,7 +606,7 @@ function QuickMeltCalc({ spotPrices }) {
         <div className="text-sm text-slate-400">Melt Value</div>
         <div className="text-3xl font-bold text-green-400">${melt}</div>
         <div className="text-xs text-slate-500 mt-1">
-          {calc.quantity} × {types[calc.type].asw.toFixed(5)} oz × ${spotPrices.silver.toFixed(2)}
+          {quantity} × {types[calc.type].asw.toFixed(5)} oz × ${spotPrices.silver.toFixed(2)}
         </div>
       </div>
     </div>
@@ -671,8 +690,9 @@ function CoinCard({ coin, onClick, spotPrice }) {
   const melt = (coin.asw * spotPrice).toFixed(2);
 
   return (
-    <div 
-      className="rounded-xl overflow-hidden hover:opacity-90 transition-all cursor-pointer group" style={{backgroundColor: '#25222a', borderColor: '#3a3745', borderWidth: '1px'}}
+    <button
+      type="button"
+      className="w-full text-left rounded-xl overflow-hidden hover:opacity-90 transition-all cursor-pointer group" style={{backgroundColor: '#25222a', borderColor: '#3a3745', borderWidth: '1px'}}
       onClick={onClick}
     >
       <div className="p-6">
@@ -703,7 +723,7 @@ function CoinCard({ coin, onClick, spotPrice }) {
           <div className="text-xs text-slate-500">Key Dates: {coin.keyDates.slice(0, 3).join(', ')}</div>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -772,7 +792,7 @@ function CoinDetail({ coin, onBack, spotPrice }) {
               <ul className="text-sm space-y-1">
                 {coin.gradeHotspots.map((spot, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <Check className="w-4 h-4 mt-0.5 text-green-400 flex-shrink-0" />
+                    <Check className="w-4 h-4 mt-0.5 text-green-400 shrink-0" />
                     <span>{spot}</span>
                   </li>
                 ))}
@@ -784,7 +804,7 @@ function CoinDetail({ coin, onBack, spotPrice }) {
               <ul className="text-sm space-y-1">
                 {coin.dangers.map((danger, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <X className="w-4 h-4 mt-0.5 text-red-400 flex-shrink-0" />
+                    <X className="w-4 h-4 mt-0.5 text-red-400 shrink-0" />
                     <span>{danger}</span>
                   </li>
                 ))}
@@ -800,8 +820,9 @@ function CoinDetail({ coin, onBack, spotPrice }) {
 // Currency Card Component
 function CurrencyCard({ currency, onClick }) {
   return (
-    <div 
-      className="rounded-xl overflow-hidden hover:opacity-90 transition-all cursor-pointer group" style={{backgroundColor: '#25222a', borderColor: '#3a3745', borderWidth: '1px'}}
+    <button
+      type="button"
+      className="w-full text-left rounded-xl overflow-hidden hover:opacity-90 transition-all cursor-pointer group" style={{backgroundColor: '#25222a', borderColor: '#3a3745', borderWidth: '1px'}}
       onClick={onClick}
     >
       <div className="p-6">
@@ -825,7 +846,7 @@ function CurrencyCard({ currency, onClick }) {
           </div>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -856,7 +877,7 @@ function CurrencyDetail({ currency, onBack }) {
               <ul className="space-y-2">
                 {currency.keyFeatures.map((feature, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
-                    <Check className="w-4 h-4 mt-0.5 text-green-400 flex-shrink-0" />
+                    <Check className="w-4 h-4 mt-0.5 text-green-400 shrink-0" />
                     <span>{feature}</span>
                   </li>
                 ))}
@@ -881,7 +902,7 @@ function CurrencyDetail({ currency, onBack }) {
               <ul className="space-y-2">
                 {currency.dangers.map((danger, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
-                    <X className="w-4 h-4 mt-0.5 text-red-400 flex-shrink-0" />
+                    <X className="w-4 h-4 mt-0.5 text-red-400 shrink-0" />
                     <span>{danger}</span>
                   </li>
                 ))}
@@ -893,7 +914,7 @@ function CurrencyDetail({ currency, onBack }) {
               <ul className="space-y-1">
                 {currency.valueFactors.map((factor, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
-                    <DollarSign className="w-4 h-4 mt-0.5 text-amber-400 flex-shrink-0" />
+                    <DollarSign className="w-4 h-4 mt-0.5 text-amber-400 shrink-0" />
                     <span>{factor}</span>
                   </li>
                 ))}
@@ -921,7 +942,7 @@ function InventoryView({ inventory, onAdd, onDelete, spotPrices, coinTypes }) {
     type: 'morgan',
     date: '',
     mintmark: '',
-    quantity: 1,
+    quantity: '1',
     paid: '',
     grade: '',
     notes: ''
@@ -933,7 +954,7 @@ function InventoryView({ inventory, onAdd, onDelete, spotPrices, coinTypes }) {
       type: 'morgan',
       date: '',
       mintmark: '',
-      quantity: 1,
+      quantity: '1',
       paid: '',
       grade: '',
       notes: ''
@@ -993,7 +1014,9 @@ function InventoryView({ inventory, onAdd, onDelete, spotPrices, coinTypes }) {
               min="1"
               placeholder="Quantity"
               value={newItem.quantity}
-              onChange={e => setNewItem({ ...newItem, quantity: parseInt(e.target.value) || 1 })}
+              inputMode="numeric"
+              onChange={e => setNewItem({ ...newItem, quantity: e.target.value })}
+              onBlur={() => setNewItem(previous => ({ ...previous, quantity: String(parsePositiveInteger(previous.quantity)) }))}
               className="p-3 bg-slate-700 rounded-lg border border-slate-600 text-white placeholder-slate-500"
             />
 
@@ -1078,7 +1101,7 @@ function InventoryView({ inventory, onAdd, onDelete, spotPrices, coinTypes }) {
                     </div>
                     <button
                       onClick={() => handleDelete(item.id)}
-                      className="p-2 text-red-400 hover:bg-red-900/30 rounded-lg transition-colors flex-shrink-0"
+                      className="p-2 text-red-400 hover:bg-red-900/30 rounded-lg transition-colors shrink-0"
                       title="Delete item"
                     >
                       <X className="w-5 h-5" />
@@ -1127,7 +1150,9 @@ function AuctionMode({ coinTypes, spotPrice, auctionCalc, setAuctionCalc }) {
                   type="number"
                   min="1"
                   value={auctionCalc.quantity}
-                  onChange={e => setAuctionCalc({ ...auctionCalc, quantity: parseInt(e.target.value) || 1 })}
+                  inputMode="numeric"
+                  onChange={e => setAuctionCalc({ ...auctionCalc, quantity: e.target.value })}
+                  onBlur={() => setAuctionCalc(previous => ({ ...previous, quantity: String(parsePositiveInteger(previous.quantity)) }))}
                   className="w-full p-4 bg-slate-700 rounded-lg border border-slate-600 text-white text-lg"
                 />
               </div>
@@ -1148,11 +1173,11 @@ function AuctionMode({ coinTypes, spotPrice, auctionCalc, setAuctionCalc }) {
                 </div>
               </div>
 
-              <div className="p-6 bg-gradient-to-r from-green-900 to-green-800 rounded-lg border-2 border-green-500">
+              <div className="p-6 bg-linear-to-r from-green-900 to-green-800 rounded-lg border-2 border-green-500">
                 <div className="text-sm text-green-300 mb-1">Maximum Bid</div>
                 <div className="text-5xl font-bold text-white mb-2">${auctionCalc.maxBid}</div>
                 <div className="text-sm text-green-300">
-                  Melt: ${(selectedCoin.asw * spotPrice * auctionCalc.quantity).toFixed(2)} + {auctionCalc.premium}% premium
+                  Melt: ${(selectedCoin.asw * spotPrice * (Number(auctionCalc.quantity) || 0)).toFixed(2)} + {auctionCalc.premium}% premium
                 </div>
               </div>
 

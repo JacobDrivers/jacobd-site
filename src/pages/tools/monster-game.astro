@@ -249,6 +249,13 @@ import Layout from '../../layouts/Layout.astro';
   let keys: { [key: string]: boolean } = {};
   let mouse = { x: 0, y: 0, worldX: 0, worldY: 0, down: false };
 
+  function updateTouchDirection(clientX: number) {
+    const rect = canvas.getBoundingClientRect();
+    const position = (clientX - rect.left) / rect.width;
+    keys['arrowleft'] = position < 0.34;
+    keys['arrowright'] = position > 0.66;
+  }
+
   // === CANVAS SETUP ===
   const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
@@ -308,6 +315,7 @@ import Layout from '../../layouts/Layout.astro';
     mouse.y = (touch.clientY - rect.top) * scaleY;
     mouse.worldX = mouse.x + camera.x;
     mouse.worldY = mouse.y + camera.y;
+    updateTouchDirection(touch.clientX);
     mouse.down = true;
     extendTentacle();
   }, { passive: false });
@@ -323,10 +331,13 @@ import Layout from '../../layouts/Layout.astro';
     mouse.y = (touch.clientY - rect.top) * scaleY;
     mouse.worldX = mouse.x + camera.x;
     mouse.worldY = mouse.y + camera.y;
+    updateTouchDirection(touch.clientX);
   }, { passive: false });
 
   canvas.addEventListener('touchend', () => {
     mouse.down = false;
+    keys['arrowleft'] = false;
+    keys['arrowright'] = false;
   });
 
   // === INITIALIZATION ===
