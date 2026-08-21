@@ -36,6 +36,15 @@ try {
   });
   await homepage.close();
 
+  const projects = await preparePage(browser, '/projects/', { width: 1440, height: 1000 });
+  await projects.screenshot({
+    path: `${outputDirectory}/projects.png`,
+    fullPage: true,
+    animations: 'disabled',
+    caret: 'hide',
+  });
+  await projects.close();
+
   const coinScout = await preparePage(
     browser,
     '/tools/coin-scout/',

@@ -18,6 +18,12 @@ This is not the complete `jacobd.us` personal site. `jacobd.us` currently points
 
 *The Coin Scout dashboard using the deployed KV-backed metals snapshot.*
 
+### Projects
+
+[![Jacob Drury projects and case studies page](./docs/screenshots/projects.png)](https://jacobd-site.pages.dev/projects/)
+
+*The project directory connecting each case study to its live tool or experiment.*
+
 ## What is here
 
 - **Coin & Currency Scout** — server-cached metals prices, melt calculators, coin and paper-currency references, local inventory tracking, and auction calculations.
