@@ -32,6 +32,18 @@ const socialImageAlt = 'Jacob Drury — tools, projects, and experiments';
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
 		<meta name="theme-color" content="#0b1220" />
+		<style>
+			.skip-link { opacity: 0; pointer-events: none; }
+			.site-header__inner { display: flex; align-items: center; justify-content: space-between; }
+			.desktop-nav { display: flex; align-items: center; }
+			.mobile-nav { display: none; }
+			.mobile-nav nav { display: none; }
+			@media (max-width: 760px) {
+				.desktop-nav { display: none; }
+				.mobile-nav { display: block; }
+				.site-brand__text { display: none; }
+			}
+		</style>
 		
 		{/* Primary Meta Tags */}
 		<title>{title}</title>
