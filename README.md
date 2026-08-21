@@ -23,6 +23,7 @@ This is not the complete `jacobd.us` personal site. `jacobd.us` currently points
 - **Coin & Currency Scout** — server-cached metals prices, melt calculators, coin and paper-currency references, local inventory tracking, and auction calculations.
 - **Tornado Sandbox** — an interactive 3D destruction experiment.
 - **The Devourer** — a canvas-based monster evolution game.
+- **Project pages** — lightweight case studies for each live project with direct launch links.
 - **Hub pages** — a focused home page, tools directory, brief About section, and custom 404 page.
 
 ## Routes
@@ -30,6 +31,10 @@ This is not the complete `jacobd.us` personal site. `jacobd.us` currently points
 | Route | Purpose |
 | --- | --- |
 | `/` | Tools, projects, experiments, and brief About content |
+| `/projects/` | Project directory and case-study links |
+| `/projects/coin-scout/` | Coin & Currency Scout project page |
+| `/projects/tornado-sandbox/` | Tornado Sandbox project page |
+| `/projects/the-devourer/` | The Devourer project page |
 | `/tools/` | Directory of live tools and games |
 | `/tools/coin-scout/` | Coin & Currency Scout |
 | `/tools/tornado-3d/` | Tornado Sandbox |
