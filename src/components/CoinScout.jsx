@@ -365,6 +365,14 @@ export default function CoinScout() {
     setInventory(previous => previous.filter(item => item.id !== itemId));
   };
 
+  const replaceInventory = (items) => {
+    setInventory(items.map((item, index) => ({
+      ...item,
+      quantity: parsePositiveInteger(item.quantity),
+      id: Number.isFinite(item.id) ? item.id : Date.now() + index,
+    })));
+  };
+
   // Auction mode calculator
   const [auctionCalc, setAuctionCalc] = useState({
     type: null,
@@ -558,6 +566,7 @@ export default function CoinScout() {
             inventory={inventory}
             onAdd={addToInventory}
             onDelete={deleteFromInventory}
+            onReplace={replaceInventory}
             spotPrices={spotPrices}
             coinTypes={COIN_TYPES}
           />
@@ -954,8 +963,9 @@ function CurrencyDetail({ currency, onBack }) {
 }
 
 // Inventory View Component
-function InventoryView({ inventory, onAdd, onDelete, spotPrices, coinTypes }) {
+function InventoryView({ inventory, onAdd, onDelete, onReplace, spotPrices, coinTypes }) {
   const [showAdd, setShowAdd] = useState(false);
+  const [importStatus, setImportStatus] = useState('');
   const [newItem, setNewItem] = useState({
     type: 'morgan',
     date: '',
@@ -984,18 +994,73 @@ function InventoryView({ inventory, onAdd, onDelete, spotPrices, coinTypes }) {
     onDelete(itemId);
   };
 
+  const exportInventory = () => {
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      items: inventory,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `coin-scout-inventory-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importInventory = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      const parsed = JSON.parse(await file.text());
+      const items = Array.isArray(parsed) ? parsed : parsed.items;
+      const validItems = Array.isArray(items)
+        ? items.filter(item => item && typeof item === 'object' && coinTypes.some(coin => coin.id === item.type))
+        : [];
+
+      if (!Array.isArray(items) || validItems.length !== items.length) {
+        throw new Error('The file contains invalid inventory items.');
+      }
+
+      onReplace(validItems);
+      setImportStatus(`${validItems.length} item${validItems.length === 1 ? '' : 's'} imported.`);
+    } catch (error) {
+      console.error('Failed to import inventory:', error);
+      setImportStatus('Could not import that file. Choose a Coin Scout inventory export.');
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-3">
         <h2 className="text-2xl font-bold">My Inventory</h2>
-        <button
-          onClick={() => setShowAdd(!showAdd)}
-          className="px-4 py-2 bg-amber-600 hover:bg-amber-700 rounded-lg flex items-center gap-2 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Add Item
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setShowAdd(!showAdd)}
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Add Item
+          </button>
+          <button
+            type="button"
+            onClick={exportInventory}
+            disabled={inventory.length === 0}
+            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50 rounded-lg transition-colors"
+          >
+            Export JSON
+          </button>
+          <label className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg cursor-pointer transition-colors">
+            Import JSON
+            <input type="file" accept="application/json,.json" onChange={importInventory} className="sr-only" />
+          </label>
+        </div>
       </div>
+
+      {importStatus && <p className="text-sm text-slate-400" role="status" aria-live="polite">{importStatus}</p>}
 
       {showAdd && (
         <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
