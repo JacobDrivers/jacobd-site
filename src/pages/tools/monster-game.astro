@@ -274,6 +274,14 @@ import Layout from '../../layouts/Layout.astro';
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
+  document.addEventListener('visibilitychange', () => {
+    gameRunning = !document.hidden;
+    if (gameRunning) {
+      lastTime = performance.now();
+      requestAnimationFrame(gameLoop);
+    }
+  });
+
   // === INPUT ===
   window.addEventListener('keydown', (e) => {
     keys[e.key.toLowerCase()] = true;

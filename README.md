@@ -100,7 +100,13 @@ Run the built site and Function with Wrangler. This command creates a local KV b
 
 ```bash
 npm run build
-npx wrangler pages dev dist --kv=METALS_CACHE
+npm exec wrangler pages dev dist --kv=METALS_CACHE
+```
+
+With the Wrangler server running, use the smoke check to verify every public route and both normal and refresh API responses:
+
+```bash
+npm run smoke -- http://127.0.0.1:8788
 ```
 
 The Astro development server alone does not execute the `functions/` directory.
@@ -129,4 +135,5 @@ npm run build
 npm run preview
 npm run screenshot
 npm run screenshot:readme
+npm run smoke -- http://127.0.0.1:8788
 ```

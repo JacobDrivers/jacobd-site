@@ -188,6 +188,8 @@ import Layout from '../../layouts/Layout.astro';
   let destructionCount=0;
   let lightningTimer=60;
   let animationFailed=false;
+  let animationPaused=false;
+  let lastDisplayedSecond=-1;
 
   // ── Boot ──────────────────────────────────────────────────────────────────
   function boot(){
@@ -320,6 +322,10 @@ import Layout from '../../layouts/Layout.astro';
       camDist=Math.max(6,Math.min(35,camDist+e.deltaY*0.04));
     },{passive:true});
     window.addEventListener('resize',sizeRenderer);
+    document.addEventListener('visibilitychange',()=>{
+      animationPaused=document.hidden;
+      if(!animationPaused&&!animationFailed)requestAnimationFrame(animate);
+    });
 
     animate();
   }
@@ -670,7 +676,10 @@ import Layout from '../../layouts/Layout.astro';
     if(dEl)dEl.textContent=String(destructionCount);
     if(tEl){
       const s=Math.floor((Date.now()-gameStartTime)/1000);
-      tEl.textContent=Math.floor(s/60)+':'+(s%60+'').padStart(2,'0');
+      if(s!==lastDisplayedSecond){
+        lastDisplayedSecond=s;
+        tEl.textContent=Math.floor(s/60)+':'+(s%60+'').padStart(2,'0');
+      }
     }
   }
 
@@ -686,7 +695,7 @@ import Layout from '../../layouts/Layout.astro';
   }
 
   function animate(t=0){
-    if(animationFailed||!THREE||!renderer)return;
+    if(animationFailed||animationPaused||!THREE||!renderer)return;
     try{
       updateTornado(t);
       updateCamera();

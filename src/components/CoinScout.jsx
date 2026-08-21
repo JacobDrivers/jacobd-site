@@ -152,6 +152,23 @@ function parsePositiveInteger(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
+function readStoredValue(key) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch (error) {
+    console.warn(`Unable to read ${key} from browser storage:`, error);
+    return null;
+  }
+}
+
+function writeStoredValue(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (error) {
+    console.warn(`Unable to save ${key} to browser storage:`, error);
+  }
+}
+
 export default function CoinScout() {
   const [spotPrices, setSpotPrices] = useState({
     ...METALS_FALLBACK,
@@ -170,10 +187,9 @@ export default function CoinScout() {
   const [selectedCoin, setSelectedCoin] = useState(null);
   const [selectedCurrency, setSelectedCurrency] = useState(null);
   const [inventory, setInventory] = useState([]);
-  const [flipped, setFlipped] = useState({});
   // Load inventory from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('coinInventory');
+    const saved = readStoredValue('coinInventory');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -188,7 +204,7 @@ export default function CoinScout() {
 
   // Save inventory to localStorage
   useEffect(() => {
-    localStorage.setItem('coinInventory', JSON.stringify(inventory));
+    writeStoredValue('coinInventory', JSON.stringify(inventory));
   }, [inventory]);
 
   // Fetch spot prices via API route
@@ -228,7 +244,7 @@ export default function CoinScout() {
         
         // Keep the most recent server snapshot for temporary offline display only.
         if (!priceData.fallback) {
-          localStorage.setItem('spotPrices', JSON.stringify(priceData));
+          writeStoredValue('spotPrices', JSON.stringify(priceData));
         }
       } else {
         throw new Error('Price snapshot did not contain valid silver and gold prices');
@@ -236,7 +252,7 @@ export default function CoinScout() {
     } catch (error) {
       console.error('Failed to fetch prices:', error);
 
-      const savedPrices = localStorage.getItem('spotPrices');
+      const savedPrices = readStoredValue('spotPrices');
       if (savedPrices) {
         try {
           const fallback = JSON.parse(savedPrices);
@@ -294,7 +310,7 @@ export default function CoinScout() {
     
     const loadPrices = async () => {
       // Show the saved snapshot immediately, then request the authoritative server snapshot.
-      const savedPrices = localStorage.getItem('spotPrices');
+      const savedPrices = readStoredValue('spotPrices');
       if (savedPrices && isMounted) {
         try {
           const prices = JSON.parse(savedPrices);
@@ -507,8 +523,6 @@ export default function CoinScout() {
                     coin={coin}
                     onClick={() => setSelectedCoin(coin)}
                     spotPrice={spotPrices.silver}
-                    flipped={flipped[coin.id]}
-                    onFlip={() => setFlipped(prev => ({ ...prev, [coin.id]: !prev[coin.id] }))}
                   />
                 ))}
               </div>
@@ -581,7 +595,9 @@ function QuickMeltCalc({ spotPrices }) {
 
   return (
     <div className="space-y-4">
+      <label htmlFor="quick-melt-type" className="sr-only">Coin type</label>
       <select
+        id="quick-melt-type"
         value={calc.type}
         onChange={e => setCalc({ ...calc, type: e.target.value })}
         className="w-full p-3 bg-slate-700 rounded-lg border border-slate-600 text-white"
@@ -591,7 +607,9 @@ function QuickMeltCalc({ spotPrices }) {
         ))}
       </select>
       
+      <label htmlFor="quick-melt-quantity" className="sr-only">Quantity of coins</label>
       <input
+        id="quick-melt-quantity"
         type="number"
         min="1"
         value={calc.quantity}
@@ -983,7 +1001,10 @@ function InventoryView({ inventory, onAdd, onDelete, spotPrices, coinTypes }) {
         <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
           <h3 className="font-bold mb-4">Add New Item</h3>
           <div className="grid md:grid-cols-2 gap-4">
+            <label htmlFor="inventory-coin-type" className="sr-only">Coin type</label>
             <select
+              id="inventory-coin-type"
+              aria-label="Inventory coin type"
               value={newItem.type}
               onChange={e => setNewItem({ ...newItem, type: e.target.value })}
               className="p-3 bg-slate-700 rounded-lg border border-slate-600 text-white"
@@ -993,7 +1014,9 @@ function InventoryView({ inventory, onAdd, onDelete, spotPrices, coinTypes }) {
               ))}
             </select>
 
+            <label htmlFor="inventory-date" className="sr-only">Date</label>
             <input
+              id="inventory-date"
               type="text"
               placeholder="Date (e.g., 1921)"
               value={newItem.date}
@@ -1001,7 +1024,9 @@ function InventoryView({ inventory, onAdd, onDelete, spotPrices, coinTypes }) {
               className="p-3 bg-slate-700 rounded-lg border border-slate-600 text-white placeholder-slate-500"
             />
 
+            <label htmlFor="inventory-mintmark" className="sr-only">Mintmark</label>
             <input
+              id="inventory-mintmark"
               type="text"
               placeholder="Mintmark (e.g., S, D, CC)"
               value={newItem.mintmark}
@@ -1009,7 +1034,9 @@ function InventoryView({ inventory, onAdd, onDelete, spotPrices, coinTypes }) {
               className="p-3 bg-slate-700 rounded-lg border border-slate-600 text-white placeholder-slate-500"
             />
 
+            <label htmlFor="inventory-quantity" className="sr-only">Quantity</label>
             <input
+              id="inventory-quantity"
               type="number"
               min="1"
               placeholder="Quantity"
@@ -1020,7 +1047,9 @@ function InventoryView({ inventory, onAdd, onDelete, spotPrices, coinTypes }) {
               className="p-3 bg-slate-700 rounded-lg border border-slate-600 text-white placeholder-slate-500"
             />
 
+            <label htmlFor="inventory-paid" className="sr-only">Amount paid</label>
             <input
+              id="inventory-paid"
               type="number"
               step="0.01"
               placeholder="Amount Paid ($)"
@@ -1029,7 +1058,9 @@ function InventoryView({ inventory, onAdd, onDelete, spotPrices, coinTypes }) {
               className="p-3 bg-slate-700 rounded-lg border border-slate-600 text-white placeholder-slate-500"
             />
 
+            <label htmlFor="inventory-grade" className="sr-only">Grade or condition</label>
             <input
+              id="inventory-grade"
               type="text"
               placeholder="Grade/Condition"
               value={newItem.grade}
@@ -1037,7 +1068,9 @@ function InventoryView({ inventory, onAdd, onDelete, spotPrices, coinTypes }) {
               className="p-3 bg-slate-700 rounded-lg border border-slate-600 text-white placeholder-slate-500"
             />
 
+            <label htmlFor="inventory-notes" className="sr-only">Notes</label>
             <textarea
+              id="inventory-notes"
               placeholder="Notes"
               value={newItem.notes}
               onChange={e => setNewItem({ ...newItem, notes: e.target.value })}
@@ -1103,6 +1136,7 @@ function InventoryView({ inventory, onAdd, onDelete, spotPrices, coinTypes }) {
                       onClick={() => handleDelete(item.id)}
                       className="p-2 text-red-400 hover:bg-red-900/30 rounded-lg transition-colors shrink-0"
                       title="Delete item"
+                      aria-label={`Delete ${coinData?.name || 'inventory item'}`}
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -1131,6 +1165,7 @@ function AuctionMode({ coinTypes, spotPrice, auctionCalc, setAuctionCalc }) {
           <div>
             <label className="block text-sm font-bold mb-2">Coin Type</label>
             <select
+              id="auction-coin-type"
               value={auctionCalc.type || ''}
               onChange={e => setAuctionCalc({ ...auctionCalc, type: e.target.value })}
               className="w-full p-4 bg-slate-700 rounded-lg border border-slate-600 text-white text-lg"
@@ -1147,6 +1182,7 @@ function AuctionMode({ coinTypes, spotPrice, auctionCalc, setAuctionCalc }) {
               <div>
                 <label className="block text-sm font-bold mb-2">Quantity</label>
                 <input
+                  id="auction-quantity"
                   type="number"
                   min="1"
                   value={auctionCalc.quantity}
@@ -1160,12 +1196,14 @@ function AuctionMode({ coinTypes, spotPrice, auctionCalc, setAuctionCalc }) {
               <div>
                 <label className="block text-sm font-bold mb-2">Premium Over Melt (%)</label>
                 <input
+                  id="auction-premium"
                   type="range"
                   min="0"
                   max="100"
                   step="5"
                   value={auctionCalc.premium}
                   onChange={e => setAuctionCalc({ ...auctionCalc, premium: parseInt(e.target.value) })}
+                  aria-label="Premium over melt percentage"
                   className="w-full"
                 />
                 <div className="text-center text-2xl font-bold text-amber-400 mt-2">
