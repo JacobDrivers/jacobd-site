@@ -136,11 +136,15 @@ textarea:focus-visible {
   color: #171006;
   font-size: 13px;
   font-weight: 800;
+  opacity: 0;
+  pointer-events: none;
   transform: translateY(-160%);
-  transition: transform 150ms ease;
+  transition: opacity 150ms ease, transform 150ms ease;
 }
 
 .skip-link:focus {
+  opacity: 1;
+  pointer-events: auto;
   transform: translateY(0);
 }
 
