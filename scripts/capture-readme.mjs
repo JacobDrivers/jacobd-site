@@ -29,7 +29,7 @@ try {
 
   const homepage = await preparePage(browser, '/', { width: 1440, height: 1000 });
   await homepage.screenshot({
-    path: `${outputDirectory}/homepage.png`,
+    path: `${outputDirectory}/homepage-redesign.png`,
     fullPage: true,
     animations: 'disabled',
     caret: 'hide',

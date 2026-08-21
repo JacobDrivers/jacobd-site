@@ -8,7 +8,7 @@ This is not the complete `jacobd.us` personal site. `jacobd.us` currently points
 
 ### Hub homepage
 
-[![Jacob Drury tools and projects hub homepage](./docs/screenshots/homepage.png)](https://jacobd-site.pages.dev/)
+[![Jacob Drury redesigned tools and projects hub homepage](./docs/screenshots/homepage-redesign.png)](https://jacobd-site.pages.dev/)
 
 *The production hub highlighting currently available tools and experiments.*
 
